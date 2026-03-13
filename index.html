@@ -449,6 +449,12 @@
       color: var(--heading);
     }
 
+    .payment-block {
+      display: grid;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
     .tip-input-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -560,6 +566,7 @@
       color: var(--muted);
       font-size: 0.9rem;
       line-height: 1.5;
+      white-space: pre-line;
     }
 
     .hidden {
@@ -595,12 +602,12 @@
       font-size: 1.35rem;
     }
 
-	.modal-text {
-	  margin: 0;
-	  color: var(--muted);
-	  line-height: 1.6;
-	  white-space: pre-line;
-	}
+    .modal-text {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      white-space: pre-line;
+    }
 
     .modal-options {
       margin-top: 16px;
@@ -844,14 +851,21 @@
               <div class="discount-sub" id="discountHint">Rabatt derzeit deaktiviert.</div>
             </div>
 
-            <button
-              class="btn success"
-              id="markPaidBtn"
-              type="button"
-              title="Mengenangaben werden danach zurückgesetzt"
-            >
-              Betrag wurde bezahlt
-            </button>
+            <div class="payment-block">
+              <div class="field">
+                <label class="small" for="amountGivenInput">Geld gegeben</label>
+                <input type="number" id="amountGivenInput" min="0" step="0.01" value="0" />
+              </div>
+
+              <button
+                class="btn success"
+                id="markPaidBtn"
+                type="button"
+                title="Mengenangaben werden danach zurückgesetzt"
+              >
+                Betrag wurde bezahlt
+              </button>
+            </div>
           </div>
 
           <div class="metric">
@@ -945,6 +959,7 @@
     const restoreConfirmDialogsBtn = document.getElementById('restoreConfirmDialogsBtn');
     const tipInput = document.getElementById('tipInput');
     const tipTotal = document.getElementById('tipTotal');
+    const amountGivenInput = document.getElementById('amountGivenInput');
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
     const themeModeLabel = document.getElementById('themeModeLabel');
@@ -1098,6 +1113,22 @@
       confirmModal.classList.remove('hidden');
       confirmModal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
+      confirmAcceptBtn.textContent = 'Ja, ich bin sicher';
+      confirmCancelBtn.textContent = 'Nein';
+      confirmAcceptBtn.focus();
+    }
+
+    function openWarningContinueDialog(title, message, onConfirm) {
+      pendingConfirmType = null;
+      pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+      confirmTitle.textContent = title;
+      confirmMessage.textContent = message;
+      confirmSkipCheckbox.checked = false;
+      confirmModal.classList.remove('hidden');
+      confirmModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      confirmAcceptBtn.textContent = 'Ja, fortfahren';
+      confirmCancelBtn.textContent = 'Nein';
       confirmAcceptBtn.focus();
     }
 
@@ -1105,6 +1136,8 @@
       pendingConfirmAction = null;
       pendingConfirmType = null;
       confirmSkipCheckbox.checked = false;
+      confirmAcceptBtn.textContent = 'Ja, ich bin sicher';
+      confirmCancelBtn.textContent = 'Nein';
       confirmModal.classList.add('hidden');
       confirmModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
@@ -1115,6 +1148,19 @@
       saveProducts();
       renderProducts();
       renderBill();
+    }
+
+    function getCurrentOrderTotal() {
+      const price = products.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
+      const discountPercentValue = discountState.enabled ? Math.min(100, Math.max(0, Number(discountState.percent) || 0)) : 0;
+      return price * (1 - discountPercentValue / 100);
+    }
+
+    function syncTipFromAmountGiven() {
+      const given = Number(amountGivenInput.value);
+      const total = getCurrentOrderTotal();
+      const tipValue = Number.isFinite(given) && given > total ? given - total : 0;
+      tipInput.value = tipValue > 0 ? tipValue.toFixed(2) : '0';
     }
 
     function updateDiscountUi() {
@@ -1158,6 +1204,7 @@
           products[index].name = e.target.value;
           saveProducts();
           renderBill();
+          syncTipFromAmountGiven();
         });
 
         const priceInput = document.createElement('input');
@@ -1170,6 +1217,7 @@
           products[index].price = Number.isFinite(value) ? Math.max(0, value) : 0;
           saveProducts();
           renderBill();
+          syncTipFromAmountGiven();
         });
 
         const qtyWrap = document.createElement('div');
@@ -1190,6 +1238,7 @@
           saveProducts();
           renderProducts();
           renderBill();
+          syncTipFromAmountGiven();
         });
 
         const qtyInput = document.createElement('input');
@@ -1202,6 +1251,7 @@
           products[index].qty = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
           saveProducts();
           renderBill();
+          syncTipFromAmountGiven();
         });
 
         const plus = document.createElement('button');
@@ -1213,6 +1263,7 @@
           saveProducts();
           renderProducts();
           renderBill();
+          syncTipFromAmountGiven();
         });
 
         qtyControls.append(minus, qtyInput, plus);
@@ -1228,6 +1279,7 @@
           saveProducts();
           renderProducts();
           renderBill();
+          syncTipFromAmountGiven();
         });
 
         row.append(
@@ -1289,6 +1341,7 @@
       saveDiscountState();
       updateDiscountUi();
       renderBill();
+      syncTipFromAmountGiven();
     });
 
     discountPercent.addEventListener('input', (e) => {
@@ -1296,7 +1349,10 @@
       discountState.percent = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
       saveDiscountState();
       renderBill();
+      syncTipFromAmountGiven();
     });
+
+    amountGivenInput.addEventListener('input', syncTipFromAmountGiven);
 
     addTipBtn.addEventListener('click', () => {
       const value = Number(tipInput.value);
@@ -1305,6 +1361,7 @@
       saveTipTotal();
       updateTipUi();
       renderBill();
+      syncTipFromAmountGiven();
     });
 
     addProductBtn.addEventListener('click', () => {
@@ -1312,29 +1369,32 @@
       saveProducts();
       renderProducts();
       renderBill();
+      syncTipFromAmountGiven();
     });
 
-	resetBtn.addEventListener('click', () => {
-	  runConfirmedAction(
-		CONFIRM_TYPES.resetProducts,
-		'Produktliste zurücksetzen',
-		'Sicher, dass die ursprüngliche Produktliste wiederhergestellt werden soll?\n\nDadurch gehen manuell hinzugefügte oder geänderte Produkte verloren.',
-		() => {
-		  products = structuredClone(defaultProducts);
-		  saveProducts();
-		  renderProducts();
-		  renderBill();
-		}
-	  );
-	});
+    resetBtn.addEventListener('click', () => {
+      runConfirmedAction(
+        CONFIRM_TYPES.resetProducts,
+        'Produktliste zurücksetzen',
+        'Sicher, dass die ursprüngliche Produktliste wiederhergestellt werden soll?\n\nDadurch gehen manuell hinzugefügte oder geänderte Produkte verloren.',
+        () => {
+          products = structuredClone(defaultProducts);
+          saveProducts();
+          renderProducts();
+          renderBill();
+          syncTipFromAmountGiven();
+        }
+      );
+    });
 
     resetQtyBtn.addEventListener('click', () => {
       runConfirmedAction(
         CONFIRM_TYPES.resetQty,
         'Mengenangaben zurücksetzen',
-        'Sicher, dass alle Mengenangaben wirklich auf 0 (null) zurückgesetzt werden sollen?',
+        'Sollen alle Mengenangaben wirklich auf den Standardwert zurückgesetzt werden?',
         () => {
           resetAllQty();
+          syncTipFromAmountGiven();
         }
       );
     });
@@ -1343,18 +1403,44 @@
       runConfirmedAction(
         CONFIRM_TYPES.resetTips,
         'Trinkgeld zurücksetzen',
-        'Sicher, dass die gesamte Trinkgeldsumme wirklich auf 0$ zurückgesetzt werden soll?',
+        'Soll die gesamte Trinkgeldsumme wirklich auf 0 zurückgesetzt werden?',
         () => {
           tipTotalValue = 0;
           saveTipTotal();
           updateTipUi();
           renderBill();
+          syncTipFromAmountGiven();
         }
       );
     });
 
     markPaidBtn.addEventListener('click', () => {
-      resetAllQty();
+      const given = Number(amountGivenInput.value);
+      const orderTotal = getCurrentOrderTotal();
+
+      const finalize = () => {
+        const autoTip = Number(tipInput.value);
+        if (Number.isFinite(autoTip) && autoTip > 0) {
+          tipTotalValue += autoTip;
+          saveTipTotal();
+          updateTipUi();
+        }
+
+        resetAllQty();
+        amountGivenInput.value = '0';
+        syncTipFromAmountGiven();
+      };
+
+      if (Number.isFinite(given) && given > 0 && given < orderTotal) {
+        openWarningContinueDialog(
+          'Betrag kleiner als Gesamtpreis',
+          'Der eingegebene Betrag ist kleiner als der berechnete Gesamtpreis der Bestellung.\n\nMöchtest du trotzdem fortfahren?',
+          finalize
+        );
+        return;
+      }
+
+      finalize();
     });
 
     restoreConfirmDialogsBtn.addEventListener('click', () => {
@@ -1409,6 +1495,7 @@
     updateTipUi();
     renderProducts();
     renderBill();
+    syncTipFromAmountGiven();
   </script>
 </body>
 </html>
