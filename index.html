@@ -853,8 +853,8 @@
 
             <div class="payment-block">
               <div class="field">
-                <label class="small" for="amountGivenInput">Geld erhalten</label>
-                <input type="number" id="amountGivenInput" min="0" step="0.01" value="0" />
+                <label class="small" for="amountReceivedInput">Geld erhalten</label>
+                <input type="number" id="amountReceivedInput" min="0" step="0.01" value="0" />
               </div>
 
               <button
@@ -959,7 +959,7 @@
     const restoreConfirmDialogsBtn = document.getElementById('restoreConfirmDialogsBtn');
     const tipInput = document.getElementById('tipInput');
     const tipTotal = document.getElementById('tipTotal');
-    const amountGivenInput = document.getElementById('amountGivenInput');
+    const amountReceivedInput = document.getElementById('amountReceivedInput');
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
     const themeModeLabel = document.getElementById('themeModeLabel');
@@ -982,6 +982,7 @@
     let confirmPrefs = loadConfirmPrefs();
     let pendingConfirmAction = null;
     let pendingConfirmType = null;
+    let lastSuggestedAmountReceived = 0;
 
     function loadProducts() {
       try {
@@ -1156,10 +1157,23 @@
       return price * (1 - discountPercentValue / 100);
     }
 
-    function syncTipFromAmountGiven() {
-      const given = Number(amountGivenInput.value);
+    function syncAmountReceivedFromTotal() {
       const total = getCurrentOrderTotal();
-      const tipValue = Number.isFinite(given) && given > total ? given - total : 0;
+      const currentValue = Number(amountReceivedInput.value);
+      const shouldUpdate = !Number.isFinite(currentValue)
+        || Math.abs(currentValue - lastSuggestedAmountReceived) < 0.009;
+
+      if (shouldUpdate) {
+        amountReceivedInput.value = total > 0 ? total.toFixed(2) : '0';
+      }
+
+      lastSuggestedAmountReceived = total;
+    }
+
+    function syncTipFromAmountReceived() {
+      const received = Number(amountReceivedInput.value);
+      const total = getCurrentOrderTotal();
+      const tipValue = Number.isFinite(received) && received > total ? received - total : 0;
       tipInput.value = tipValue > 0 ? tipValue.toFixed(2) : '0';
     }
 
@@ -1204,7 +1218,7 @@
           products[index].name = e.target.value;
           saveProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         });
 
         const priceInput = document.createElement('input');
@@ -1217,7 +1231,7 @@
           products[index].price = Number.isFinite(value) ? Math.max(0, value) : 0;
           saveProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         });
 
         const qtyWrap = document.createElement('div');
@@ -1238,7 +1252,7 @@
           saveProducts();
           renderProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         });
 
         const qtyInput = document.createElement('input');
@@ -1251,7 +1265,7 @@
           products[index].qty = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
           saveProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         });
 
         const plus = document.createElement('button');
@@ -1263,7 +1277,7 @@
           saveProducts();
           renderProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         });
 
         qtyControls.append(minus, qtyInput, plus);
@@ -1279,7 +1293,7 @@
           saveProducts();
           renderProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         });
 
         row.append(
@@ -1294,6 +1308,7 @@
     }
 
     function renderBill() {
+      syncAmountReceivedFromTotal();
       const chosen = products.filter(p => Number(p.qty) > 0);
       const items = chosen.reduce((sum, p) => sum + Number(p.qty || 0), 0);
       const price = chosen.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
@@ -1341,7 +1356,7 @@
       saveDiscountState();
       updateDiscountUi();
       renderBill();
-      syncTipFromAmountGiven();
+      syncTipFromAmountReceived();
     });
 
     discountPercent.addEventListener('input', (e) => {
@@ -1349,10 +1364,12 @@
       discountState.percent = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
       saveDiscountState();
       renderBill();
-      syncTipFromAmountGiven();
+      syncTipFromAmountReceived();
     });
 
-    amountGivenInput.addEventListener('input', syncTipFromAmountGiven);
+    amountReceivedInput.addEventListener('input', () => {
+      syncTipFromAmountReceived();
+    });
 
     addTipBtn.addEventListener('click', () => {
       const value = Number(tipInput.value);
@@ -1361,7 +1378,7 @@
       saveTipTotal();
       updateTipUi();
       renderBill();
-      syncTipFromAmountGiven();
+      syncTipFromAmountReceived();
     });
 
     addProductBtn.addEventListener('click', () => {
@@ -1369,7 +1386,7 @@
       saveProducts();
       renderProducts();
       renderBill();
-      syncTipFromAmountGiven();
+      syncTipFromAmountReceived();
     });
 
     resetBtn.addEventListener('click', () => {
@@ -1382,7 +1399,7 @@
           saveProducts();
           renderProducts();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         }
       );
     });
@@ -1391,10 +1408,10 @@
       runConfirmedAction(
         CONFIRM_TYPES.resetQty,
         'Mengenangaben zurücksetzen',
-        'Sollen alle Mengenangaben wirklich auf den Standardwert zurückgesetzt werden?',
+        'Sicher, dass alle Mengenangaben wirklich auf 0 (null) zurückgesetzt werden sollen?',
         () => {
           resetAllQty();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         }
       );
     });
@@ -1403,19 +1420,19 @@
       runConfirmedAction(
         CONFIRM_TYPES.resetTips,
         'Trinkgeld zurücksetzen',
-        'Soll die gesamte Trinkgeldsumme wirklich auf 0 zurückgesetzt werden?',
+        'Sicher, dass die gesamte Trinkgeldsumme wirklich auf 0 (null) zurückgesetzt werden soll?',
         () => {
           tipTotalValue = 0;
           saveTipTotal();
           updateTipUi();
           renderBill();
-          syncTipFromAmountGiven();
+          syncTipFromAmountReceived();
         }
       );
     });
 
     markPaidBtn.addEventListener('click', () => {
-      const given = Number(amountGivenInput.value);
+      const received = Number(amountReceivedInput.value);
       const orderTotal = getCurrentOrderTotal();
 
       const finalize = () => {
@@ -1427,11 +1444,12 @@
         }
 
         resetAllQty();
-        amountGivenInput.value = '0';
-        syncTipFromAmountGiven();
+        amountReceivedInput.value = '0';
+        lastSuggestedAmountReceived = 0;
+        syncTipFromAmountReceived();
       };
 
-      if (Number.isFinite(given) && given > 0 && given < orderTotal) {
+      if (Number.isFinite(received) && received > 0 && received < orderTotal) {
         openWarningContinueDialog(
           'Betrag kleiner als Gesamtpreis',
           'Der eingegebene Betrag ist kleiner als der berechnete Gesamtpreis der Bestellung.\n\nMöchtest du trotzdem fortfahren?',
@@ -1495,7 +1513,7 @@
     updateTipUi();
     renderProducts();
     renderBill();
-    syncTipFromAmountGiven();
+    syncTipFromAmountReceived();
   </script>
 </body>
 </html>
