@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>UwU Café Preisrechner</title>
+  <style>
+    :root {
+      --bg-grad-1: rgba(255, 235, 244, 0.82);
+      --bg-grad-2: rgba(240, 229, 255, 0.74);
+      --bg-base-1: #f8f4f7;
+      --bg-base-2: #f2edf2;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-border: rgba(255, 255, 255, 0.72);
+      --panel-inner: rgba(255, 255, 255, 0.74);
+      --panel-strong: rgba(255, 255, 255, 0.92);
+      --line: #eadde3;
+      --text: #5f5a61;
+      --heading: #615862;
+      --muted: #938b93;
+      --accent-soft: rgba(217, 195, 207, 0.55);
+      --accent: #d9c3cf;
+      --accent-strong: #caa9b9;
+      --accent-dark: #b78da1;
+      --danger-soft: rgba(215, 154, 165, 0.18);
+      --danger-text: #9b6170;
+      --success-soft: rgba(147, 207, 170, 0.22);
+      --success-strong: #77b78f;
+      --success-dark: #5d9976;
+      --success-text: #37614a;
+      --field-bg: rgba(255, 255, 255, 0.96);
+      --field-border: #e6d8df;
+      --field-focus-ring: rgba(202, 169, 185, 0.18);
+      --shadow: 0 18px 44px rgba(171, 141, 157, 0.16);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --gap-main: clamp(22px, 2.5vw, 42px);
+      --field-height: 42px;
+      --field-pad-x: 12px;
+    }
+
+    :root[data-theme="dark"] {
+      --bg-grad-1: rgba(119, 9, 47, 0.42);
+      --bg-grad-2: rgba(94, 70, 132, 0.24);
+      --bg-base-1: #17141b;
+      --bg-base-2: #221924;
+      --panel: rgba(18, 20, 26, 0.88);
+      --panel-border: rgba(255, 255, 255, 0.07);
+      --panel-inner: rgba(14, 20, 25, 0.72);
+      --panel-strong: rgba(14, 19, 24, 0.94);
+      --line: rgba(145, 167, 183, 0.18);
+      --text: #e4d7d8;
+      --heading: #e8ddde;
+      --muted: #b8a7a9;
+      --accent-soft: rgba(119, 76, 101, 0.34);
+      --accent: #d7b4c6;
+      --accent-strong: #b986a2;
+      --accent-dark: #d2a9be;
+      --danger-soft: rgba(111, 55, 67, 0.34);
+      --danger-text: #deb0bc;
+      --success-soft: rgba(73, 124, 93, 0.32);
+      --success-strong: #78b38f;
+      --success-dark: #5e8f72;
+      --success-text: #d9f0df;
+      --field-bg: rgba(13, 18, 23, 0.92);
+      --field-border: rgba(133, 151, 167, 0.22);
+      --field-focus-ring: rgba(184, 134, 162, 0.24);
+      --shadow: 0 24px 58px rgba(16, 9, 19, 0.44);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, var(--bg-grad-1), transparent 30%),
+        radial-gradient(circle at bottom right, var(--bg-grad-2), transparent 28%),
+        linear-gradient(180deg, var(--bg-base-1) 0%, var(--bg-base-2) 100%);
+      padding: clamp(12px, 2.6vw, 34px);
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .shell {
+      width: min(1720px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gap-main);
+      align-items: start;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 46px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      cursor: pointer;
+      transition: transform 0.14s ease, filter 0.14s ease, background 0.25s ease, color 0.25s ease;
+    }
+
+    .theme-toggle:hover,
+    .qty-btn:hover,
+    .btn:hover,
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    .theme-toggle .theme-icon {
+      width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--heading);
+      font-size: 0.92rem;
+    }
+
+    .theme-toggle .theme-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.1;
+    }
+
+    .theme-toggle .theme-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .theme-toggle .theme-mode {
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      min-width: 0;
+      transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .hero {
+      padding: clamp(18px, 2vw, 28px) clamp(18px, 2.4vw, 32px) 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "✦";
+      position: absolute;
+      right: 18px;
+      top: 14px;
+      font-size: 18px;
+      color: var(--accent-dark);
+      opacity: 0.85;
+    }
+
+    .hero-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--heading);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 3vw, 3rem);
+      line-height: 1.06;
+      color: var(--heading);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.92fr);
+      gap: var(--gap-main);
+      align-items: start;
+      min-width: 0;
+    }
+
+    .section {
+      padding: clamp(18px, 2vw, 28px);
+      min-width: 0;
+    }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 1.16rem;
+      color: var(--heading);
+    }
+
+    .section .hint {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.55;
+    }
+
+    .product-list {
+      display: grid;
+      gap: 8px;
+      max-height: min(72vh, 920px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      min-width: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent-strong) transparent;
+    }
+
+    .product-list::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .product-list::-webkit-scrollbar-thumb {
+      background: var(--accent-soft);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+
+    .product-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(110px, 0.58fr) minmax(160px, 0.8fr) 42px;
+      gap: 10px;
+      align-items: end;
+      padding: 10px 12px;
+      background: var(--panel-inner);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      min-width: 0;
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    .field,
+    .qty-wrap {
+      min-width: 0;
+    }
+
+    label.small {
+      display: block;
+      font-size: 0.72rem;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    input,
+    button,
+    select {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--field-border);
+      background: var(--field-bg);
+      color: var(--text);
+      border-radius: 13px;
+      padding: 8px var(--field-pad-x);
+      min-height: var(--field-height);
+      outline: none;
+      transition: 0.18s ease;
+      min-width: 0;
+      font-size: 0.94rem;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent-dark);
+      box-shadow: 0 0 0 4px var(--field-focus-ring);
+    }
+
+    .qty-controls {
+      display: grid;
+      grid-template-columns: 42px minmax(56px, 1fr) 42px;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .qty-btn,
+    .btn,
+    .icon-btn {
+      border: none;
+      cursor: pointer;
+      transition: transform 0.14s ease, filter 0.14s ease, background 0.14s ease, color 0.14s ease;
+    }
+
+    .qty-btn {
+      width: 42px;
+      min-width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      background: var(--accent-soft);
+      color: var(--heading);
+      font-size: 1rem;
+      font-weight: 700;
+      display: inline-grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .icon-btn {
+      width: 42px;
+      min-width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      background: var(--danger-soft);
+      color: var(--danger-text);
+      font-size: 0.98rem;
+      font-weight: 700;
+      justify-self: end;
+      display: inline-grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .toolbar,
+    .tip-actions,
+    .settings-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 14px;
+      background: var(--accent-soft);
+      color: var(--heading);
+      font-weight: 700;
+    }
+
+    .btn.primary {
+      background: linear-gradient(180deg, var(--accent-strong), var(--accent-dark));
+      color: #fff;
+    }
+
+    .btn.soft {
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .btn.success {
+      background: linear-gradient(180deg, var(--success-strong), var(--success-dark));
+      color: #fff;
+    }
+
+    .btn.text {
+      min-height: auto;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      font-weight: 600;
+    }
+
+    .btn.text:hover {
+      color: var(--heading);
+      filter: none;
+      transform: none;
+    }
+
+    .totals {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    .metric .k {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+
+    .metric .v {
+      font-size: clamp(1.3rem, 2.2vw, 2rem);
+      font-weight: 800;
+      color: var(--heading);
+    }
+
+    .tip-input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 12px;
+    }
+
+    .bill-list {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .bill-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      min-width: 0;
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    .bill-row .name {
+      font-weight: 700;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .bill-row .price,
+    .bill-row .sum {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 16px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+    }
+
+    .discount-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .discount-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .discount-toggle,
+    .skip-checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: var(--heading);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .discount-toggle input,
+    .skip-checkbox input {
+      inline-size: 18px;
+      block-size: 18px;
+      accent-color: var(--accent-dark);
+      cursor: pointer;
+    }
+
+    .discount-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .discount-summary {
+      display: grid;
+      gap: 8px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--panel-inner);
+    }
+
+    .discount-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--heading);
+    }
+
+    .discount-line strong {
+      font-size: 1.12rem;
+    }
+
+    .discount-sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(18, 12, 18, 0.46);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .modal {
+      width: min(520px, 100%);
+      padding: 24px;
+      background: var(--panel-strong);
+      border: 1px solid var(--panel-border);
+    }
+
+    .modal-head {
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      margin: 0 0 10px;
+      color: var(--heading);
+      font-size: 1.35rem;
+    }
+
+	.modal-text {
+	  margin: 0;
+	  color: var(--muted);
+	  line-height: 1.6;
+	  white-space: pre-line;
+	}
+
+    .modal-options {
+      margin-top: 16px;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .modal-actions .btn {
+      min-width: 170px;
+    }
+
+    @media (max-width: 1280px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 920px) {
+      .hero-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .topbar {
+        justify-content: stretch;
+        width: 100%;
+      }
+
+      .theme-toggle {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .product-row {
+        grid-template-columns: minmax(0, 1.2fr) minmax(94px, 0.62fr) minmax(146px, 0.9fr) 40px;
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .qty-controls {
+        grid-template-columns: 40px minmax(50px, 1fr) 40px;
+      }
+
+      .qty-btn,
+      .icon-btn,
+      input[type="text"],
+      input[type="number"] {
+        min-height: 40px;
+      }
+
+      .qty-btn,
+      .icon-btn {
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 12px;
+      }
+
+      .section,
+      .hero {
+        padding: 18px;
+      }
+
+      .hero h1 {
+        font-size: clamp(1.7rem, 8vw, 2.3rem);
+      }
+
+      .product-row {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "name"
+          "price"
+          "qty"
+          "remove";
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        align-items: stretch;
+      }
+
+      .product-row > :nth-child(1) {
+        grid-area: name;
+      }
+
+      .product-row > :nth-child(2) {
+        grid-area: price;
+      }
+
+      .product-row > :nth-child(3) {
+        grid-area: qty;
+      }
+
+      .product-row > :nth-child(4) {
+        grid-area: remove;
+      }
+
+      .field,
+      .qty-wrap {
+        width: 100%;
+      }
+
+      label.small {
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        min-height: 36px;
+        padding: 7px 10px;
+        font-size: 0.9rem;
+      }
+
+      .qty-controls {
+        grid-template-columns: 36px minmax(0, 1fr) 36px;
+        gap: 6px;
+      }
+
+      .qty-btn,
+      .icon-btn {
+        width: 36px;
+        min-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+      }
+
+      .icon-btn {
+        justify-self: stretch;
+        width: 100%;
+      }
+
+      .tip-input-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .toolbar,
+      .tip-actions,
+      .settings-actions,
+      .modal-actions {
+        flex-direction: column;
+      }
+
+      .toolbar .btn,
+      .tip-actions .btn,
+      .settings-actions .btn,
+      .modal-actions .btn {
+        width: 100%;
+      }
+
+      .bill-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .bill-row .price,
+      .bill-row .sum {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero card">
+      <div class="hero-header">
+        <div class="badge">UwU Café</div>
+        <div class="topbar">
+          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Darstellungsmodus umschalten" aria-pressed="false">
+            <span class="theme-icon" id="themeIcon">☾</span>
+            <span class="theme-text">
+              <span class="theme-title">Darstellung</span>
+              <span class="theme-mode" id="themeModeLabel">Auto</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <h1>Preisrechner</h1>
+    </section>
+
+    <div class="grid">
+      <section class="section card">
+        <h2>Produkte & Preise</h2>
+        <p class="hint">Namen, Preise und Anzahl lassen sich jederzeit anpassen.</p>
+
+        <div id="productList" class="product-list"></div>
+
+        <div class="toolbar">
+          <button class="btn primary" id="addProductBtn" type="button">＋ Produkt hinzufügen</button>
+          <button class="btn soft" id="resetBtn" type="button">Standardliste zurücksetzen</button>
+          <button class="btn soft" id="resetQtyBtn" type="button">Mengenangaben zurücksetzen</button>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Rechnung</h2>
+        <p class="hint">Die Summe aktualisiert sich live auf Basis deiner ausgewählten Mengen.</p>
+
+        <div class="totals">
+          <div class="metric">
+            <div class="k">Artikel gesamt</div>
+            <div class="v" id="totalItems">0</div>
+          </div>
+
+          <div class="metric">
+            <div class="k">Gesamtpreis</div>
+            <div class="v" id="totalPrice">0,00$</div>
+          </div>
+
+          <div class="metric discount-card">
+            <div class="discount-topline">
+              <label class="discount-toggle">
+                <input type="checkbox" id="discountEnabled" />
+                <span>Rabatt aktivieren</span>
+              </label>
+            </div>
+
+            <div id="discountControls" class="discount-controls hidden" aria-hidden="true">
+              <div class="field">
+                <label class="small" for="discountPercent">Rabatt in %</label>
+                <input type="number" id="discountPercent" min="0" max="100" step="0.1" value="10" />
+              </div>
+            </div>
+
+            <div class="discount-summary">
+              <div class="discount-line">
+                <span>Rabattierter Preis</span>
+                <strong id="discountedPrice">0,00$</strong>
+              </div>
+              <div class="discount-sub" id="discountHint">Rabatt derzeit deaktiviert.</div>
+            </div>
+
+            <button
+              class="btn success"
+              id="markPaidBtn"
+              type="button"
+              title="Mengenangaben werden danach zurückgesetzt"
+            >
+              Betrag wurde bezahlt
+            </button>
+          </div>
+
+          <div class="metric">
+            <div class="k">Trinkgeld gesamt</div>
+            <div class="v" id="tipTotal">0,00$</div>
+
+            <div class="tip-input-row">
+              <div class="field">
+                <label class="small" for="tipInput">Trinkgeld hinzufügen</label>
+                <input type="number" id="tipInput" min="0" step="0.01" value="0" />
+              </div>
+              <button class="btn primary" id="addTipBtn" type="button">＋ Hinzufügen</button>
+            </div>
+
+            <div class="tip-actions">
+              <button class="btn soft" id="resetTipBtn" type="button">Trinkgeld zurücksetzen</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="billList" class="bill-list"></div>
+
+        <div class="settings-actions">
+          <button class="btn text" id="restoreConfirmDialogsBtn" type="button">
+            Bestätigungsdialoge wieder aktivieren
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-backdrop hidden" aria-hidden="true">
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+      <div class="modal-head">
+        <div class="badge">Bestätigung</div>
+      </div>
+      <h2 id="confirmTitle" class="modal-title">Aktion bestätigen</h2>
+      <p id="confirmMessage" class="modal-text"></p>
+      <div class="modal-options">
+        <label class="skip-checkbox">
+          <input type="checkbox" id="confirmSkipCheckbox" />
+          <span>Nicht erneut anzeigen</span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn primary" id="confirmAcceptBtn">Ja, ich bin sicher</button>
+        <button type="button" class="btn soft" id="confirmCancelBtn">Nein</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'uwuCafePriceCalculator_v2';
+    const THEME_STORAGE_KEY = 'uwuCafePriceCalculator_theme';
+    const DISCOUNT_STORAGE_KEY = 'uwuCafePriceCalculator_discount';
+    const TIP_STORAGE_KEY = 'uwuCafePriceCalculator_tipTotal';
+    const CONFIRM_PREFS_STORAGE_KEY = 'uwuCafePriceCalculator_confirmPrefs';
+
+    const defaultProducts = [
+      { name: 'Ramen', price: 25, qty: 0 },
+      { name: 'Reis mit Curry', price: 25, qty: 0 },
+      { name: 'Bento Box', price: 25, qty: 0 },
+      { name: 'Onigiri', price: 15, qty: 0 },
+      { name: 'Dango', price: 15, qty: 0 },
+      { name: 'Mochi', price: 12, qty: 0 },
+      { name: 'Kuchen', price: 15, qty: 0 },
+      { name: 'UwU Wasser', price: 10, qty: 0 },
+      { name: 'Bubble Tea', price: 14, qty: 0 },
+      { name: 'Kaffee', price: 8, qty: 0 },
+      { name: 'Matcha Latte', price: 10, qty: 0 },
+      { name: 'Tee', price: 10, qty: 0 }
+    ];
+
+    const CONFIRM_TYPES = {
+      resetProducts: 'resetProducts',
+      resetQty: 'resetQty',
+      resetTips: 'resetTips'
+    };
+
+    const productList = document.getElementById('productList');
+    const billList = document.getElementById('billList');
+    const totalItems = document.getElementById('totalItems');
+    const totalPrice = document.getElementById('totalPrice');
+    const discountedPrice = document.getElementById('discountedPrice');
+    const addProductBtn = document.getElementById('addProductBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resetQtyBtn = document.getElementById('resetQtyBtn');
+    const resetTipBtn = document.getElementById('resetTipBtn');
+    const addTipBtn = document.getElementById('addTipBtn');
+    const markPaidBtn = document.getElementById('markPaidBtn');
+    const restoreConfirmDialogsBtn = document.getElementById('restoreConfirmDialogsBtn');
+    const tipInput = document.getElementById('tipInput');
+    const tipTotal = document.getElementById('tipTotal');
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeModeLabel = document.getElementById('themeModeLabel');
+    const discountEnabled = document.getElementById('discountEnabled');
+    const discountPercent = document.getElementById('discountPercent');
+    const discountControls = document.getElementById('discountControls');
+    const discountHint = document.getElementById('discountHint');
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmTitle = document.getElementById('confirmTitle');
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmAcceptBtn = document.getElementById('confirmAcceptBtn');
+    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+    const confirmSkipCheckbox = document.getElementById('confirmSkipCheckbox');
+    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+
+    let products = loadProducts();
+    let userThemePreference = loadThemePreference();
+    let discountState = loadDiscountState();
+    let tipTotalValue = loadTipTotal();
+    let confirmPrefs = loadConfirmPrefs();
+    let pendingConfirmAction = null;
+    let pendingConfirmType = null;
+
+    function loadProducts() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultProducts);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || !parsed.length) return structuredClone(defaultProducts);
+        return parsed.map(item => ({
+          name: typeof item.name === 'string' ? item.name : 'Neues Produkt',
+          price: Number.isFinite(Number(item.price)) ? Number(item.price) : 0,
+          qty: Number.isFinite(Number(item.qty)) ? Math.max(0, Number(item.qty)) : 0
+        }));
+      } catch {
+        return structuredClone(defaultProducts);
+      }
+    }
+
+    function saveProducts() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    }
+
+    function loadThemePreference() {
+      try {
+        const saved = localStorage.getItem(THEME_STORAGE_KEY);
+        return saved === 'light' || saved === 'dark' ? saved : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveThemePreference(mode) {
+      if (!mode) {
+        localStorage.removeItem(THEME_STORAGE_KEY);
+        return;
+      }
+      localStorage.setItem(THEME_STORAGE_KEY, mode);
+    }
+
+    function loadDiscountState() {
+      try {
+        const raw = localStorage.getItem(DISCOUNT_STORAGE_KEY);
+        if (!raw) return { enabled: false, percent: 10 };
+        const parsed = JSON.parse(raw);
+        const percent = Number(parsed?.percent);
+        return {
+          enabled: Boolean(parsed?.enabled),
+          percent: Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 10
+        };
+      } catch {
+        return { enabled: false, percent: 10 };
+      }
+    }
+
+    function saveDiscountState() {
+      localStorage.setItem(DISCOUNT_STORAGE_KEY, JSON.stringify(discountState));
+    }
+
+    function loadTipTotal() {
+      try {
+        const raw = Number(localStorage.getItem(TIP_STORAGE_KEY));
+        return Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      } catch {
+        return 0;
+      }
+    }
+
+    function saveTipTotal() {
+      localStorage.setItem(TIP_STORAGE_KEY, String(tipTotalValue));
+    }
+
+    function loadConfirmPrefs() {
+      try {
+        const raw = localStorage.getItem(CONFIRM_PREFS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return {
+          resetProducts: Boolean(parsed?.resetProducts),
+          resetQty: Boolean(parsed?.resetQty),
+          resetTips: Boolean(parsed?.resetTips)
+        };
+      } catch {
+        return {
+          resetProducts: false,
+          resetQty: false,
+          resetTips: false
+        };
+      }
+    }
+
+    function saveConfirmPrefs() {
+      localStorage.setItem(CONFIRM_PREFS_STORAGE_KEY, JSON.stringify(confirmPrefs));
+    }
+
+    function getResolvedTheme() {
+      return userThemePreference || (themeMedia.matches ? 'dark' : 'light');
+    }
+
+    function applyTheme() {
+      const resolved = getResolvedTheme();
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.style.colorScheme = resolved;
+      themeToggle.setAttribute('aria-pressed', String(resolved === 'dark'));
+      themeIcon.textContent = resolved === 'dark' ? '☾' : '☀';
+      themeModeLabel.textContent = userThemePreference
+        ? `${resolved === 'dark' ? 'Dark Mode' : 'Light Mode'} · Manuell`
+        : `${resolved === 'dark' ? 'Dark Mode' : 'Light Mode'} · Auto`;
+    }
+
+    function toggleTheme() {
+      const current = getResolvedTheme();
+      userThemePreference = current === 'dark' ? 'light' : 'dark';
+      saveThemePreference(userThemePreference);
+      applyTheme();
+    }
+
+    function runConfirmedAction(confirmType, title, message, onConfirm) {
+      if (confirmPrefs[confirmType]) {
+        onConfirm();
+        return;
+      }
+      openConfirmDialog(confirmType, title, message, onConfirm);
+    }
+
+    function openConfirmDialog(confirmType, title, message, onConfirm) {
+      pendingConfirmType = confirmType;
+      pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+      confirmTitle.textContent = title;
+      confirmMessage.textContent = message;
+      confirmSkipCheckbox.checked = false;
+      confirmModal.classList.remove('hidden');
+      confirmModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      confirmAcceptBtn.focus();
+    }
+
+    function closeConfirmDialog() {
+      pendingConfirmAction = null;
+      pendingConfirmType = null;
+      confirmSkipCheckbox.checked = false;
+      confirmModal.classList.add('hidden');
+      confirmModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function resetAllQty() {
+      products = products.map(product => ({ ...product, qty: 0 }));
+      saveProducts();
+      renderProducts();
+      renderBill();
+    }
+
+    function updateDiscountUi() {
+      discountEnabled.checked = discountState.enabled;
+      discountPercent.value = discountState.percent;
+      discountControls.classList.toggle('hidden', !discountState.enabled);
+      discountControls.setAttribute('aria-hidden', String(!discountState.enabled));
+    }
+
+    function updateTipUi() {
+      tipTotal.textContent = money(tipTotalValue);
+      tipInput.value = '0';
+    }
+
+    function money(value) {
+      return `${Number(value).toFixed(2).replace('.', ',')}$`;
+    }
+
+    function createField(labelText, input) {
+      const wrap = document.createElement('div');
+      wrap.className = 'field';
+      const label = document.createElement('label');
+      label.className = 'small';
+      label.textContent = labelText;
+      wrap.append(label, input);
+      return wrap;
+    }
+
+    function renderProducts() {
+      productList.innerHTML = '';
+
+      products.forEach((product, index) => {
+        const row = document.createElement('div');
+        row.className = 'product-row';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = product.name;
+        nameInput.placeholder = 'Produktname';
+        nameInput.addEventListener('input', (e) => {
+          products[index].name = e.target.value;
+          saveProducts();
+          renderBill();
+        });
+
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.step = '0.01';
+        priceInput.min = '0';
+        priceInput.value = product.price;
+        priceInput.addEventListener('input', (e) => {
+          const value = Number(e.target.value);
+          products[index].price = Number.isFinite(value) ? Math.max(0, value) : 0;
+          saveProducts();
+          renderBill();
+        });
+
+        const qtyWrap = document.createElement('div');
+        qtyWrap.className = 'qty-wrap';
+        const qtyLabel = document.createElement('label');
+        qtyLabel.className = 'small';
+        qtyLabel.textContent = 'Menge';
+
+        const qtyControls = document.createElement('div');
+        qtyControls.className = 'qty-controls';
+
+        const minus = document.createElement('button');
+        minus.className = 'qty-btn';
+        minus.type = 'button';
+        minus.textContent = '−';
+        minus.addEventListener('click', () => {
+          products[index].qty = Math.max(0, Number(products[index].qty || 0) - 1);
+          saveProducts();
+          renderProducts();
+          renderBill();
+        });
+
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.min = '0';
+        qtyInput.step = '1';
+        qtyInput.value = product.qty;
+        qtyInput.addEventListener('input', (e) => {
+          const value = Number(e.target.value);
+          products[index].qty = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+          saveProducts();
+          renderBill();
+        });
+
+        const plus = document.createElement('button');
+        plus.className = 'qty-btn';
+        plus.type = 'button';
+        plus.textContent = '+';
+        plus.addEventListener('click', () => {
+          products[index].qty = Number(products[index].qty || 0) + 1;
+          saveProducts();
+          renderProducts();
+          renderBill();
+        });
+
+        qtyControls.append(minus, qtyInput, plus);
+        qtyWrap.append(qtyLabel, qtyControls);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'icon-btn';
+        delBtn.type = 'button';
+        delBtn.title = 'Produkt entfernen';
+        delBtn.textContent = '✕';
+        delBtn.addEventListener('click', () => {
+          products.splice(index, 1);
+          saveProducts();
+          renderProducts();
+          renderBill();
+        });
+
+        row.append(
+          createField('Produkt', nameInput),
+          createField('Preis', priceInput),
+          qtyWrap,
+          delBtn
+        );
+
+        productList.appendChild(row);
+      });
+    }
+
+    function renderBill() {
+      const chosen = products.filter(p => Number(p.qty) > 0);
+      const items = chosen.reduce((sum, p) => sum + Number(p.qty || 0), 0);
+      const price = chosen.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
+      const discountPercentValue = discountState.enabled ? Math.min(100, Math.max(0, Number(discountState.percent) || 0)) : 0;
+      const discountedTotal = price * (1 - discountPercentValue / 100);
+
+      totalItems.textContent = items;
+      totalPrice.textContent = money(price);
+      discountedPrice.textContent = money(discountedTotal);
+      discountHint.textContent = discountState.enabled
+        ? `Rabatt von ${discountPercentValue.toFixed(1).replace('.', ',')}% aktiv · Ersparnis ${money(price - discountedTotal)}`
+        : 'Rabatt derzeit deaktiviert.';
+
+      billList.innerHTML = '';
+
+      if (!chosen.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Noch nichts ausgewählt ✦';
+        billList.appendChild(empty);
+        return;
+      }
+
+      chosen.forEach(product => {
+        const row = document.createElement('div');
+        row.className = 'bill-row';
+        const lineSum = Number(product.qty) * Number(product.price);
+        row.innerHTML = `
+          <div class="name">${escapeHtml(product.name)} × ${product.qty}</div>
+          <div class="price">${money(product.price)} je</div>
+          <div class="sum">${money(lineSum)}</div>
+        `;
+        billList.appendChild(row);
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    discountEnabled.addEventListener('change', (e) => {
+      discountState.enabled = e.target.checked;
+      saveDiscountState();
+      updateDiscountUi();
+      renderBill();
+    });
+
+    discountPercent.addEventListener('input', (e) => {
+      const value = Number(e.target.value);
+      discountState.percent = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
+      saveDiscountState();
+      renderBill();
+    });
+
+    addTipBtn.addEventListener('click', () => {
+      const value = Number(tipInput.value);
+      if (!Number.isFinite(value) || value <= 0) return;
+      tipTotalValue += value;
+      saveTipTotal();
+      updateTipUi();
+      renderBill();
+    });
+
+    addProductBtn.addEventListener('click', () => {
+      products.push({ name: 'Neues Produkt', price: 0, qty: 0 });
+      saveProducts();
+      renderProducts();
+      renderBill();
+    });
+
+	resetBtn.addEventListener('click', () => {
+	  runConfirmedAction(
+		CONFIRM_TYPES.resetProducts,
+		'Produktliste zurücksetzen',
+		'Sicher, dass die ursprüngliche Produktliste wiederhergestellt werden soll?\n\nDadurch gehen manuell hinzugefügte oder geänderte Produkte verloren.',
+		() => {
+		  products = structuredClone(defaultProducts);
+		  saveProducts();
+		  renderProducts();
+		  renderBill();
+		}
+	  );
+	});
+
+    resetQtyBtn.addEventListener('click', () => {
+      runConfirmedAction(
+        CONFIRM_TYPES.resetQty,
+        'Mengenangaben zurücksetzen',
+        'Sicher, dass alle Mengenangaben wirklich auf 0 (null) zurückgesetzt werden sollen?',
+        () => {
+          resetAllQty();
+        }
+      );
+    });
+
+    resetTipBtn.addEventListener('click', () => {
+      runConfirmedAction(
+        CONFIRM_TYPES.resetTips,
+        'Trinkgeld zurücksetzen',
+        'Sicher, dass die gesamte Trinkgeldsumme wirklich auf 0$ zurückgesetzt werden soll?',
+        () => {
+          tipTotalValue = 0;
+          saveTipTotal();
+          updateTipUi();
+          renderBill();
+        }
+      );
+    });
+
+    markPaidBtn.addEventListener('click', () => {
+      resetAllQty();
+    });
+
+    restoreConfirmDialogsBtn.addEventListener('click', () => {
+      confirmPrefs = {
+        resetProducts: false,
+        resetQty: false,
+        resetTips: false
+      };
+      saveConfirmPrefs();
+    });
+
+    confirmAcceptBtn.addEventListener('click', () => {
+      const action = pendingConfirmAction;
+      const type = pendingConfirmType;
+      const shouldSkip = confirmSkipCheckbox.checked;
+
+      if (shouldSkip && type) {
+        confirmPrefs[type] = true;
+        saveConfirmPrefs();
+      }
+
+      closeConfirmDialog();
+      if (action) action();
+    });
+
+    confirmCancelBtn.addEventListener('click', closeConfirmDialog);
+
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) closeConfirmDialog();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !confirmModal.classList.contains('hidden')) {
+        closeConfirmDialog();
+      }
+    });
+
+    themeToggle.addEventListener('click', toggleTheme);
+
+    if (typeof themeMedia.addEventListener === 'function') {
+      themeMedia.addEventListener('change', () => {
+        if (!userThemePreference) applyTheme();
+      });
+    } else if (typeof themeMedia.addListener === 'function') {
+      themeMedia.addListener(() => {
+        if (!userThemePreference) applyTheme();
+      });
+    }
+
+    applyTheme();
+    updateDiscountUi();
+    updateTipUi();
+    renderProducts();
+    renderBill();
+  </script>
+</body>
+</html>
