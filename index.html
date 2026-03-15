@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
   <title>UwU Café-Preisrechner</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico"/>  
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />  
   <style>
     :root {
       --bg-grad-1: rgba(255, 235, 244, 0.82);
@@ -195,6 +195,22 @@
       gap: 16px;
       margin-bottom: 12px;
       flex-wrap: wrap;
+    }
+
+    .hero-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .hero-logo {
+      height: clamp(40px, 5vw, 56px);
+      width: auto;
+      display: block;
+      flex: 0 0 auto;
+      object-fit: contain;
     }
 
     .badge {
@@ -686,6 +702,10 @@
         font-size: clamp(1.7rem, 8vw, 2.3rem);
       }
 
+      .hero-brand {
+        max-width: 100%;
+      }
+
       .product-row {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
@@ -786,7 +806,10 @@
   <div class="shell">
     <section class="hero card">
       <div class="hero-header">
-        <div class="badge">UwU Café-Preisrechner</div>
+        <div class="hero-brand">
+          <img src="favicon-512.png" alt="UwU Café Logo" class="hero-logo" />
+          <div class="badge">UwU Café-Preisrechner</div>
+        </div>
         <div class="topbar">
           <button id="themeToggle" class="theme-toggle" type="button" aria-label="Darstellungsmodus umschalten" aria-pressed="false">
             <span class="theme-icon" id="themeIcon">☾</span>
