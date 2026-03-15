@@ -642,6 +642,18 @@
       min-width: 170px;
     }
 
+
+    .info-list {
+      margin: 14px 0 0;
+      padding-left: 20px;
+      color: var(--heading);
+      line-height: 1.6;
+    }
+
+    .info-list li + li {
+      margin-top: 4px;
+    }
+
     @media (max-width: 1280px) {
       .grid {
         grid-template-columns: minmax(0, 1fr);
@@ -941,6 +953,20 @@
     </div>
   </div>
 
+  <div id="infoModal" class="modal-backdrop hidden" aria-hidden="true">
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="infoTitle" aria-describedby="infoMessage">
+      <div class="modal-head">
+        <div class="badge">Hinweis</div>
+      </div>
+      <h2 id="infoTitle" class="modal-title">Neue Produkte erkannt</h2>
+      <div id="infoMessage" class="modal-text"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn primary" id="infoCloseBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+
   <script>
     const STORAGE_KEY = 'uwuCafePriceCalculator_v2';
     const THEME_STORAGE_KEY = 'uwuCafePriceCalculator_theme';
@@ -1000,9 +1026,16 @@
     const confirmAcceptBtn = document.getElementById('confirmAcceptBtn');
     const confirmCancelBtn = document.getElementById('confirmCancelBtn');
     const confirmSkipCheckbox = document.getElementById('confirmSkipCheckbox');
+    const infoModal = document.getElementById('infoModal');
+    const infoTitle = document.getElementById('infoTitle');
+    const infoMessage = document.getElementById('infoMessage');
+    const infoCloseBtn = document.getElementById('infoCloseBtn');
     const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
 
-    let products = loadProducts();
+    const initialProducts = loadProducts();
+    const productSyncResult = syncProductsWithDefaults(initialProducts);
+
+    let products = productSyncResult.products;
     let userThemePreference = loadThemePreference();
     let discountState = loadDiscountState();
     let tipTotalValue = loadTipTotal();
@@ -1011,19 +1044,63 @@
     let pendingConfirmType = null;
     let lastSuggestedAmountReceived = 0;
 
+    function cloneDefaultProducts() {
+      return defaultProducts.map(product => ({ ...product }));
+    }
+
+    function normalizeProductName(name) {
+      return String(name || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLocaleLowerCase('de-DE');
+    }
+
+    function syncProductsWithDefaults(localProducts) {
+      const safeLocalProducts = Array.isArray(localProducts)
+        ? localProducts.map(item => ({
+            name: typeof item.name === 'string' ? item.name : 'Neues Produkt',
+            price: Number.isFinite(Number(item.price)) ? Number(item.price) : 0,
+            qty: Number.isFinite(Number(item.qty)) ? Math.max(0, Number(item.qty)) : 0
+          }))
+        : [];
+
+      const existingNames = new Set(
+        safeLocalProducts
+          .map(product => normalizeProductName(product.name))
+          .filter(Boolean)
+      );
+
+      const addedProducts = [];
+
+      defaultProducts.forEach(defaultProduct => {
+        const normalizedName = normalizeProductName(defaultProduct.name);
+        if (!normalizedName || existingNames.has(normalizedName)) return;
+
+        const newProduct = { ...defaultProduct, qty: 0 };
+        safeLocalProducts.push(newProduct);
+        addedProducts.push(newProduct.name);
+        existingNames.add(normalizedName);
+      });
+
+      return {
+        products: safeLocalProducts.length ? safeLocalProducts : cloneDefaultProducts(),
+        addedProducts
+      };
+    }
+
     function loadProducts() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return structuredClone(defaultProducts);
+        if (!raw) return cloneDefaultProducts();
         const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed) || !parsed.length) return structuredClone(defaultProducts);
+        if (!Array.isArray(parsed) || !parsed.length) return cloneDefaultProducts();
         return parsed.map(item => ({
           name: typeof item.name === 'string' ? item.name : 'Neues Produkt',
           price: Number.isFinite(Number(item.price)) ? Number(item.price) : 0,
           qty: Number.isFinite(Number(item.qty)) ? Math.max(0, Number(item.qty)) : 0
         }));
       } catch {
-        return structuredClone(defaultProducts);
+        return cloneDefaultProducts();
       }
     }
 
@@ -1169,6 +1246,28 @@
       confirmModal.classList.add('hidden');
       confirmModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+    }
+
+
+    function openInfoDialog(title, addedProductNames) {
+      const names = Array.isArray(addedProductNames) ? addedProductNames.filter(Boolean) : [];
+      if (!names.length) return;
+
+      infoTitle.textContent = title;
+      infoMessage.innerHTML = `
+        <p class="modal-text">Neue Produkte wurden zur Liste hinzugefügt:</p>
+        <ul class="info-list">${names.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>
+      `;
+      infoModal.classList.remove('hidden');
+      infoModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      infoCloseBtn.focus();
+    }
+
+    function closeInfoDialog() {
+      infoModal.classList.add('hidden');
+      infoModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = confirmModal.classList.contains('hidden') ? '' : 'hidden';
     }
 
     function resetAllQty() {
@@ -1422,7 +1521,7 @@
         'Produktliste zurücksetzen',
         'Sicher, dass die ursprüngliche Produktliste wiederhergestellt werden soll?\n\nDadurch gehen manuell hinzugefügte oder geänderte Produkte verloren.',
         () => {
-          products = structuredClone(defaultProducts);
+          products = cloneDefaultProducts();
           saveProducts();
           renderProducts();
           renderBill();
@@ -1517,9 +1616,21 @@
       if (e.target === confirmModal) closeConfirmDialog();
     });
 
+    infoCloseBtn.addEventListener('click', closeInfoDialog);
+
+    infoModal.addEventListener('click', (e) => {
+      if (e.target === infoModal) closeInfoDialog();
+    });
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !confirmModal.classList.contains('hidden')) {
-        closeConfirmDialog();
+      if (e.key === 'Escape') {
+        if (!confirmModal.classList.contains('hidden')) {
+          closeConfirmDialog();
+          return;
+        }
+        if (!infoModal.classList.contains('hidden')) {
+          closeInfoDialog();
+        }
       }
     });
 
@@ -1535,12 +1646,20 @@
       });
     }
 
+    if (productSyncResult.addedProducts.length) {
+      saveProducts();
+    }
+
     applyTheme();
     updateDiscountUi();
     updateTipUi();
     renderProducts();
     renderBill();
     syncTipFromAmountReceived();
+
+    if (productSyncResult.addedProducts.length) {
+      openInfoDialog('Neue Produkte erkannt', productSyncResult.addedProducts);
+    }
   </script>
 </body>
 </html>
