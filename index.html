@@ -207,10 +207,11 @@
 
     .hero-logo {
       height: clamp(40px, 5vw, 56px);
-      width: auto;
+      width: clamp(40px, 5vw, 56px);
       display: block;
       flex: 0 0 auto;
-      object-fit: contain;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     .badge {
