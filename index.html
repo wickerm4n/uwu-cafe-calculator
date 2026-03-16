@@ -692,10 +692,32 @@
     }
 
 
+    .order-summary-shell {
+      display: grid;
+      gap: 18px;
+      margin-top: 16px;
+    }
+
     .order-summary-list {
       display: grid;
       gap: 10px;
-      margin-top: 16px;
+      max-height: min(46vh, 520px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent-strong) transparent;
+    }
+
+    .order-summary-list::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .order-summary-list::-webkit-scrollbar-thumb {
+      background: var(--accent-soft);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
     }
 
     .order-summary-row {
@@ -1706,7 +1728,7 @@
             </div>
           `;
 
-        orderMessage.innerHTML = `<div class="order-summary-list">${rows}</div>${totals}`;
+        orderMessage.innerHTML = `<div class="order-summary-shell"><div class="order-summary-list">${rows}</div>${totals}</div>`;
       }
 
       orderModal.classList.remove('hidden');
