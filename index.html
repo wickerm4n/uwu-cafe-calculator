@@ -421,6 +421,15 @@
       color: #fff;
     }
 
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      line-height: 1;
+    }
+
     .btn.text {
       min-height: auto;
       padding: 0;
@@ -436,6 +445,25 @@
       color: var(--heading);
       filter: none;
       transform: none;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      filter: grayscale(0.08);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn.order-highlight {
+      position: relative;
+      background: linear-gradient(180deg, #ff9a57, #ff6b2c);
+      color: #fff;
+      box-shadow: 0 0 0 1px rgba(255, 176, 130, 0.18), 0 14px 30px rgba(255, 106, 44, 0.18);
+    }
+
+    .btn.order-highlight:hover:not(:disabled) {
+      filter: brightness(1.04);
     }
 
     .totals {
@@ -471,6 +499,11 @@
       display: grid;
       gap: 12px;
       margin-top: 10px;
+    }
+
+    .payment-actions {
+      display: grid;
+      gap: 10px;
     }
 
     .tip-input-row {
@@ -610,6 +643,10 @@
       border: 1px solid var(--panel-border);
     }
 
+    #orderModal .modal {
+      width: min(860px, calc(100vw - 36px));
+    }
+
     .modal-head {
       margin-bottom: 10px;
     }
@@ -654,6 +691,89 @@
       margin-top: 4px;
     }
 
+
+    .order-summary-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .order-summary-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.5fr) auto auto auto;
+      gap: 18px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--panel-inner);
+      border: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .order-summary-row .name {
+      font-weight: 700;
+      color: var(--heading);
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .order-summary-row .qty,
+    .order-summary-row .unit,
+    .order-summary-row .sum {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .order-summary-totals {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: var(--panel-inner);
+      border: 1px solid var(--line);
+    }
+
+    .order-summary-total-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--heading);
+    }
+
+    .order-summary-total-line strong {
+      font-size: 1.08rem;
+    }
+
+
+    @media (max-width: 780px) {
+      #orderModal .modal {
+        width: min(100%, calc(100vw - 24px));
+      }
+
+      .order-summary-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .order-summary-row .name {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+      }
+
+      .order-summary-row .qty,
+      .order-summary-row .unit,
+      .order-summary-row .sum {
+        text-align: left;
+      }
+    }
+
     @media (max-width: 1280px) {
       .grid {
         grid-template-columns: minmax(0, 1fr);
@@ -682,6 +802,10 @@
         padding: 10px;
       }
 
+      #orderModal .modal {
+        width: min(92vw, 860px);
+      }
+
       .qty-controls {
         grid-template-columns: 40px minmax(50px, 1fr) 40px;
       }
@@ -698,6 +822,19 @@
         width: 40px;
         min-width: 40px;
         height: 40px;
+      }
+
+      .order-summary-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .order-summary-row .name,
+      .order-summary-row .qty,
+      .order-summary-row .unit,
+      .order-summary-row .sum {
+        white-space: normal;
+        text-align: left;
       }
     }
 
@@ -803,6 +940,19 @@
         width: 100%;
       }
 
+
+      .order-summary-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+      }
+
+      .order-summary-row .qty,
+      .order-summary-row .unit,
+      .order-summary-row .sum {
+        text-align: left;
+        white-space: normal;
+      }
+
       .bill-row {
         grid-template-columns: minmax(0, 1fr);
         gap: 8px;
@@ -843,9 +993,9 @@
         <div id="productList" class="product-list"></div>
 
         <div class="toolbar">
-          <button class="btn primary" id="addProductBtn" type="button">＋ Produkt hinzufügen</button>
-          <button class="btn soft" id="resetBtn" type="button">Standardliste zurücksetzen</button>
-          <button class="btn soft" id="resetQtyBtn" type="button">Mengenangaben zurücksetzen</button>
+          <button class="btn primary" id="addProductBtn" type="button"><span class="btn-icon" aria-hidden="true">🛒</span>＋ Produkt hinzufügen</button>
+          <button class="btn soft" id="resetBtn" type="button"><span class="btn-icon" aria-hidden="true">↺</span>Standardliste zurücksetzen</button>
+          <button class="btn soft" id="resetQtyBtn" type="button"><span class="btn-icon" aria-hidden="true">🧹</span>Mengenangaben zurücksetzen</button>
         </div>
       </section>
 
@@ -893,14 +1043,19 @@
                 <input type="number" id="amountReceivedInput" min="0" step="0.01" value="0" />
               </div>
 
-              <button
-                class="btn success"
-                id="markPaidBtn"
-                type="button"
-                title="Mengenangaben werden danach zurückgesetzt"
-              >
-                Betrag wurde bezahlt
-              </button>
+              <div class="payment-actions">
+                <button class="btn order-highlight" id="showOrderBtn" type="button" disabled>
+                  🧾 Aktuelle Bestellung anzeigen
+                </button>
+                <button
+                  class="btn success"
+                  id="markPaidBtn"
+                  type="button"
+                  title="Mengenangaben werden danach zurückgesetzt"
+                >
+                  🛒 Betrag wurde bezahlt
+                </button>
+              </div>
             </div>
           </div>
 
@@ -913,11 +1068,11 @@
                 <label class="small" for="tipInput">Trinkgeld hinzufügen</label>
                 <input type="number" id="tipInput" min="0" step="0.01" value="0" />
               </div>
-              <button class="btn primary" id="addTipBtn" type="button">＋ Hinzufügen</button>
+              <button class="btn primary" id="addTipBtn" type="button"><span class="btn-icon" aria-hidden="true">💰</span>＋ Hinzufügen</button>
             </div>
 
             <div class="tip-actions">
-              <button class="btn soft" id="resetTipBtn" type="button">Trinkgeld zurücksetzen</button>
+              <button class="btn soft" id="resetTipBtn" type="button"><span class="btn-icon" aria-hidden="true">↺</span>Trinkgeld zurücksetzen</button>
             </div>
           </div>
         </div>
@@ -947,8 +1102,8 @@
         </label>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn primary" id="confirmAcceptBtn">Ja, ich bin sicher</button>
-        <button type="button" class="btn soft" id="confirmCancelBtn">Nein</button>
+        <button type="button" class="btn primary" id="confirmAcceptBtn"><span class="btn-icon" aria-hidden="true">✔</span>Ja, ich bin sicher</button>
+        <button type="button" class="btn soft" id="confirmCancelBtn"><span class="btn-icon" aria-hidden="true">✕</span>Nein</button>
       </div>
     </div>
   </div>
@@ -961,11 +1116,24 @@
       <h2 id="infoTitle" class="modal-title">Neue Produkte erkannt</h2>
       <div id="infoMessage" class="modal-text"></div>
       <div class="modal-actions">
-        <button type="button" class="btn primary" id="infoCloseBtn">OK</button>
+        <button type="button" class="btn primary" id="infoCloseBtn"><span class="btn-icon" aria-hidden="true">✔</span>OK</button>
       </div>
     </div>
   </div>
 
+
+  <div id="orderModal" class="modal-backdrop hidden" aria-hidden="true">
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="orderTitle" aria-describedby="orderMessage">
+      <div class="modal-head">
+        <div class="badge">Aktuelle Bestellung</div>
+      </div>
+      <h2 id="orderTitle" class="modal-title">Bestellübersicht</h2>
+      <div id="orderMessage" class="modal-text"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn primary" id="orderCloseBtn">🔒 Schließen</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const STORAGE_KEY = 'uwuCafePriceCalculator_v2';
@@ -1010,6 +1178,7 @@
     const addTipBtn = document.getElementById('addTipBtn');
     const markPaidBtn = document.getElementById('markPaidBtn');
     const restoreConfirmDialogsBtn = document.getElementById('restoreConfirmDialogsBtn');
+    const showOrderBtn = document.getElementById('showOrderBtn');
     const tipInput = document.getElementById('tipInput');
     const tipTotal = document.getElementById('tipTotal');
     const amountReceivedInput = document.getElementById('amountReceivedInput');
@@ -1030,6 +1199,10 @@
     const infoTitle = document.getElementById('infoTitle');
     const infoMessage = document.getElementById('infoMessage');
     const infoCloseBtn = document.getElementById('infoCloseBtn');
+    const orderModal = document.getElementById('orderModal');
+    const orderTitle = document.getElementById('orderTitle');
+    const orderMessage = document.getElementById('orderMessage');
+    const orderCloseBtn = document.getElementById('orderCloseBtn');
     const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
 
     const initialProducts = loadProducts();
@@ -1315,6 +1488,14 @@
       tipInput.value = '0';
     }
 
+    function updateShowOrderButtonState() {
+      const hasItems = products.some(product => Number(product.qty || 0) > 0);
+      showOrderBtn.disabled = !hasItems;
+      showOrderBtn.classList.toggle('is-active', hasItems);
+      showOrderBtn.setAttribute('aria-disabled', String(!hasItems));
+      showOrderBtn.title = hasItems ? 'Aktuelle Bestellung mit ausgewählten Produkten anzeigen' : 'Sobald Produkte ausgewählt wurden, kann die aktuelle Bestellung angezeigt werden';
+    }
+
     function money(value) {
       return `${Number(value).toFixed(2).replace('.', ',')}$`;
     }
@@ -1435,6 +1616,7 @@
 
     function renderBill() {
       syncAmountReceivedFromTotal();
+      updateShowOrderButtonState();
       const chosen = products.filter(p => Number(p.qty) > 0);
       const items = chosen.reduce((sum, p) => sum + Number(p.qty || 0), 0);
       const price = chosen.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
@@ -1475,6 +1657,68 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+
+    function getCurrentOrderItems() {
+      return products
+        .filter(product => Number(product.qty) > 0)
+        .map(product => ({
+          name: product.name,
+          qty: Number(product.qty || 0),
+          price: Number(product.price || 0),
+          sum: Number(product.qty || 0) * Number(product.price || 0)
+        }));
+    }
+
+    function openOrderDialog() {
+      const chosen = getCurrentOrderItems();
+      const subtotal = chosen.reduce((sum, product) => sum + product.sum, 0);
+      const discountPercentValue = discountState.enabled ? Math.min(100, Math.max(0, Number(discountState.percent) || 0)) : 0;
+      const discountAmount = subtotal * (discountPercentValue / 100);
+      const total = subtotal - discountAmount;
+
+      orderTitle.textContent = 'Bestellübersicht';
+
+      if (!chosen.length) {
+        orderMessage.innerHTML = '<div class="empty">Aktuell sind noch keine Produkte mit einer Menge größer als 0 ausgewählt.</div>';
+      } else {
+        const rows = chosen.map(product => `
+          <div class="order-summary-row">
+            <div class="name">${escapeHtml(product.name)}</div>
+            <div class="qty">Menge: ${product.qty}</div>
+            <div class="unit">Einzelpreis: ${money(product.price)}</div>
+            <div class="sum">Gesamt: ${money(product.sum)}</div>
+          </div>
+        `).join('');
+
+        const totals = discountState.enabled
+          ? `
+            <div class="order-summary-totals">
+              <div class="order-summary-total-line"><span>Zwischensumme</span><strong>${money(subtotal)}</strong></div>
+              <div class="order-summary-total-line"><span>Rabatt (${discountPercentValue.toFixed(1).replace('.', ',')}%)</span><strong>− ${money(discountAmount)}</strong></div>
+              <div class="order-summary-total-line"><span>Gesamter Bestellbetrag</span><strong>${money(total)}</strong></div>
+            </div>
+          `
+          : `
+            <div class="order-summary-totals">
+              <div class="order-summary-total-line"><span>Gesamter Bestellbetrag</span><strong>${money(total)}</strong></div>
+            </div>
+          `;
+
+        orderMessage.innerHTML = `<div class="order-summary-list">${rows}</div>${totals}`;
+      }
+
+      orderModal.classList.remove('hidden');
+      orderModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      orderCloseBtn.focus();
+    }
+
+    function closeOrderDialog() {
+      orderModal.classList.add('hidden');
+      orderModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = confirmModal.classList.contains('hidden') && infoModal.classList.contains('hidden') ? '' : 'hidden';
     }
 
     discountEnabled.addEventListener('change', (e) => {
@@ -1587,6 +1831,11 @@
       finalize();
     });
 
+    showOrderBtn.addEventListener('click', () => {
+      if (showOrderBtn.disabled) return;
+      openOrderDialog();
+    });
+
     restoreConfirmDialogsBtn.addEventListener('click', () => {
       confirmPrefs = {
         resetProducts: false,
@@ -1617,9 +1866,14 @@
     });
 
     infoCloseBtn.addEventListener('click', closeInfoDialog);
+    orderCloseBtn.addEventListener('click', closeOrderDialog);
 
     infoModal.addEventListener('click', (e) => {
       if (e.target === infoModal) closeInfoDialog();
+    });
+
+    orderModal.addEventListener('click', (e) => {
+      if (e.target === orderModal) closeOrderDialog();
     });
 
     document.addEventListener('keydown', (e) => {
@@ -1630,6 +1884,10 @@
         }
         if (!infoModal.classList.contains('hidden')) {
           closeInfoDialog();
+          return;
+        }
+        if (!orderModal.classList.contains('hidden')) {
+          closeOrderDialog();
         }
       }
     });
