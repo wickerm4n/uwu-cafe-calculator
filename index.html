@@ -408,6 +408,7 @@
     .btn.primary {
       background: linear-gradient(180deg, var(--accent-strong), var(--accent-dark));
       color: #fff;
+      box-shadow: 0 0 0 1px rgba(255, 191, 214, 0.14), 0 14px 30px rgba(232, 114, 166, 0.16);
     }
 
     .btn.soft {
@@ -419,6 +420,7 @@
     .btn.success {
       background: linear-gradient(180deg, var(--success-strong), var(--success-dark));
       color: #fff;
+      box-shadow: 0 0 0 1px rgba(176, 230, 196, 0.14), 0 14px 30px rgba(76, 175, 126, 0.16);
     }
 
 
@@ -462,7 +464,9 @@
       box-shadow: 0 0 0 1px rgba(255, 176, 130, 0.18), 0 14px 30px rgba(255, 106, 44, 0.18);
     }
 
-    .btn.order-highlight:hover:not(:disabled) {
+    .btn.order-highlight:hover:not(:disabled),
+    .btn.primary:hover:not(:disabled),
+    .btn.success:hover:not(:disabled) {
       filter: brightness(1.04);
     }
 
