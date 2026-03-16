@@ -1711,8 +1711,7 @@
       } else {
         const rows = chosen.map(product => `
           <div class="order-summary-row">
-            <div class="name">${escapeHtml(product.name)}</div>
-            <div class="qty">Menge: ${product.qty}</div>
+            <div class="name">${product.qty} × ${escapeHtml(product.name)}</div>
             <div class="unit">Einzelpreis: ${money(product.price)}</div>
             <div class="sum">Gesamt: ${money(product.sum)}</div>
           </div>
