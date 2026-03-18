@@ -84,6 +84,8 @@ const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
 let pendingConfirmAction = null;
 let pendingConfirmType = null;
 let lastSuggestedAmountReceived = 0;
+let lastSuggestedAmountReceivedRaw = '0';
+let lastSuggestedTipRaw = '0';
 
 function getStorage() {
   try {
@@ -151,7 +153,20 @@ function sanitizeProductName(name) {
 
 function sanitizeMoneyInputValue(value, max) {
   const normalized = clampNumber(value, 0, max, 0);
-  return normalized > 0 ? normalized.toFixed(2) : '0';
+  return normalized > 0 ? normalized.toFixed(2).replace('.', ',') : '0';
+}
+
+function parseMoneyInputValue(value, max) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return 0;
+
+  const normalized = raw
+    .replace(/\s+/g, '')
+    .replace(/\.(?=.*[\.,])/g, '')
+    .replace(',', '.');
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? clampNumber(parsed, 0, max, 0) : 0;
 }
 
 function sanitizeIntegerInputValue(value, max) {
@@ -424,25 +439,36 @@ function getCurrentOrderTotal() {
 }
 
 function syncAmountReceivedFromTotal() {
-  const total = getCurrentOrderTotal();
-  const currentValue = Number(amountReceivedInput.value);
-  const shouldUpdate = !Number.isFinite(currentValue)
+  const total = clampNumber(getCurrentOrderTotal(), 0, SECURITY_LIMITS.maxAmountReceived, 0);
+  const currentRaw = String(amountReceivedInput.value ?? '').trim();
+  const currentValue = parseMoneyInputValue(currentRaw, SECURITY_LIMITS.maxAmountReceived);
+  const shouldUpdate = !currentRaw
+    || currentRaw === lastSuggestedAmountReceivedRaw
     || Math.abs(currentValue - lastSuggestedAmountReceived) < 0.009;
 
   if (shouldUpdate) {
-    amountReceivedInput.value = sanitizeMoneyInputValue(total, SECURITY_LIMITS.maxAmountReceived);
+    const suggested = sanitizeMoneyInputValue(total, SECURITY_LIMITS.maxAmountReceived);
+    amountReceivedInput.value = suggested;
+    lastSuggestedAmountReceivedRaw = suggested;
   }
 
-  lastSuggestedAmountReceived = clampNumber(total, 0, SECURITY_LIMITS.maxAmountReceived, 0);
+  lastSuggestedAmountReceived = total;
 }
 
 function syncTipFromAmountReceived() {
-  const received = clampNumber(amountReceivedInput.value, 0, SECURITY_LIMITS.maxAmountReceived, 0);
-  amountReceivedInput.value = sanitizeMoneyInputValue(received, SECURITY_LIMITS.maxAmountReceived);
-
+  const received = parseMoneyInputValue(amountReceivedInput.value, SECURITY_LIMITS.maxAmountReceived);
   const total = getCurrentOrderTotal();
   const tipValue = received > total ? received - total : 0;
-  tipInput.value = sanitizeMoneyInputValue(tipValue, SECURITY_LIMITS.maxTipTotal);
+  const tipRaw = String(tipInput.value ?? '').trim();
+  const shouldUpdateTip = document.activeElement !== tipInput
+    || !tipRaw
+    || tipRaw === lastSuggestedTipRaw;
+
+  if (shouldUpdateTip) {
+    const suggestedTip = sanitizeMoneyInputValue(tipValue, SECURITY_LIMITS.maxTipTotal);
+    tipInput.value = suggestedTip;
+    lastSuggestedTipRaw = suggestedTip;
+  }
 }
 
 function updateDiscountUi() {
@@ -455,6 +481,7 @@ function updateDiscountUi() {
 function updateTipUi() {
   tipTotal.textContent = money(tipTotalValue);
   tipInput.value = '0';
+  lastSuggestedTipRaw = '0';
 }
 
 function updateShowOrderButtonState() {
@@ -772,11 +799,19 @@ amountReceivedInput.addEventListener('input', () => {
 });
 
 tipInput.addEventListener('input', () => {
-  tipInput.value = sanitizeMoneyInputValue(tipInput.value, SECURITY_LIMITS.maxTipTotal);
+  lastSuggestedTipRaw = '';
+});
+
+amountReceivedInput.addEventListener('blur', () => {
+  lastSuggestedAmountReceivedRaw = String(amountReceivedInput.value ?? '').trim() || '0';
+});
+
+tipInput.addEventListener('blur', () => {
+  lastSuggestedTipRaw = String(tipInput.value ?? '').trim() || '0';
 });
 
 addTipBtn.addEventListener('click', () => {
-  const value = clampNumber(tipInput.value, 0, SECURITY_LIMITS.maxTipTotal, 0);
+  const value = parseMoneyInputValue(tipInput.value, SECURITY_LIMITS.maxTipTotal);
   if (value <= 0) return;
   tipTotalValue = clampNumber(tipTotalValue + value, 0, SECURITY_LIMITS.maxTipTotal, tipTotalValue);
   saveTipTotal();
@@ -840,11 +875,11 @@ resetTipBtn.addEventListener('click', () => {
 });
 
 markPaidBtn.addEventListener('click', () => {
-  const received = clampNumber(amountReceivedInput.value, 0, SECURITY_LIMITS.maxAmountReceived, 0);
+  const received = parseMoneyInputValue(amountReceivedInput.value, SECURITY_LIMITS.maxAmountReceived);
   const orderTotal = getCurrentOrderTotal();
 
   const finalize = () => {
-    const autoTip = clampNumber(tipInput.value, 0, SECURITY_LIMITS.maxTipTotal, 0);
+    const autoTip = parseMoneyInputValue(tipInput.value, SECURITY_LIMITS.maxTipTotal);
     if (autoTip > 0) {
       tipTotalValue = clampNumber(tipTotalValue + autoTip, 0, SECURITY_LIMITS.maxTipTotal, tipTotalValue);
       saveTipTotal();

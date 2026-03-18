@@ -82,7 +82,7 @@
             <div class="payment-block">
               <div class="field">
                 <label class="small" for="amountReceivedInput">Gesamtbetrag erhalten (inkl. Trinkgeld)</label>
-                <input type="number" id="amountReceivedInput" min="0" max="1000000" step="0.01" value="0" inputmode="decimal" autocomplete="off" />
+                <input type="text" id="amountReceivedInput" value="0" inputmode="decimal" autocomplete="off" spellcheck="false" />
               </div>
 
               <div class="payment-actions">
@@ -103,7 +103,7 @@
             <div class="tip-input-row">
               <div class="field">
                 <label class="small" for="tipInput">Trinkgeld hinzufügen</label>
-                <input type="number" id="tipInput" min="0" max="1000000" step="0.01" value="0" inputmode="decimal" autocomplete="off" />
+                <input type="text" id="tipInput" value="0" inputmode="decimal" autocomplete="off" spellcheck="false" />
               </div>
               <button class="btn primary" id="addTipBtn" type="button"><span class="btn-icon" aria-hidden="true">💰</span>＋ Hinzufügen</button>
             </div>
@@ -171,6 +171,6 @@
     </div>
   </div>
 
-  <script src="script.js" defer integrity="sha384-36DL6VWFdJ+efKCbcToCpcxeviQrd9iNntl4ztlM2Hi0HQ00GHCsBM2XAWIYUWzG" crossorigin="anonymous"></script>
+  <script src="script.js" defer integrity="sha384-G1uRHWp2mR3OwhXu4caUmudX13/8YI5oPCelZ6zO9ZlcZMn0LO4PW0nEqte75C3X" crossorigin="anonymous"></script>
 </body>
 </html>
