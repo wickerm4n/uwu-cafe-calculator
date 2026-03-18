@@ -6,6 +6,51 @@ const DISCOUNT_STORAGE_KEY = 'uwuCafePriceCalculator_discount';
 const TIP_STORAGE_KEY = 'uwuCafePriceCalculator_tipTotal';
 const CONFIRM_PREFS_STORAGE_KEY = 'uwuCafePriceCalculator_confirmPrefs';
 
+const PRODUCT_CATEGORIES = Object.freeze({
+  savory: 'savory',
+  sweet: 'sweet',
+  drinks: 'drinks'
+});
+
+const CATEGORY_ORDER = Object.freeze([
+  PRODUCT_CATEGORIES.savory,
+  PRODUCT_CATEGORIES.sweet,
+  PRODUCT_CATEGORIES.drinks
+]);
+
+const CATEGORY_META = Object.freeze({
+  [PRODUCT_CATEGORIES.savory]: {
+    title: 'Herzhafte Speisen',
+    addLabel: 'Herzhafte Speise hinzufügen'
+  },
+  [PRODUCT_CATEGORIES.sweet]: {
+    title: 'Süßspeisen / Desserts',
+    addLabel: 'Dessert hinzufügen'
+  },
+  [PRODUCT_CATEGORIES.drinks]: {
+    title: 'Getränke',
+    addLabel: 'Getränk hinzufügen'
+  }
+});
+
+const DEFAULT_PRODUCT_CATEGORY_MAP = Object.freeze({
+  Ramen: PRODUCT_CATEGORIES.savory,
+  'Reis mit Curry': PRODUCT_CATEGORIES.savory,
+  'Bento Box': PRODUCT_CATEGORIES.savory,
+  Onigiri: PRODUCT_CATEGORIES.savory,
+  Omuraisu: PRODUCT_CATEGORIES.savory,
+  Karaage: PRODUCT_CATEGORIES.savory,
+  Dango: PRODUCT_CATEGORIES.sweet,
+  Mochi: PRODUCT_CATEGORIES.sweet,
+  Kuchen: PRODUCT_CATEGORIES.sweet,
+  'UwU Wasser': PRODUCT_CATEGORIES.drinks,
+  'Bubble Tea': PRODUCT_CATEGORIES.drinks,
+  Kaffee: PRODUCT_CATEGORIES.drinks,
+  'Matcha Latte': PRODUCT_CATEGORIES.drinks,
+  Tee: PRODUCT_CATEGORIES.drinks,
+  'UwU Cookie': PRODUCT_CATEGORIES.sweet
+});
+
 const defaultProducts = [
   { name: 'Ramen', price: 25, qty: 0 },
   { name: 'Reis mit Curry', price: 25, qty: 0 },
@@ -23,42 +68,6 @@ const defaultProducts = [
   { name: 'Tee', price: 10, qty: 0 },
   { name: 'UwU Cookie', price: 0, qty: 0 }
 ];
-
-const PRODUCT_CATEGORIES = Object.freeze({
-  savory: 'savory',
-  sweet: 'sweet',
-  drinks: 'drinks'
-});
-
-const PRODUCT_CATEGORY_LABELS = Object.freeze({
-  [PRODUCT_CATEGORIES.savory]: 'Herzhafte Speisen',
-  [PRODUCT_CATEGORIES.sweet]: 'Süßspeisen / Desserts',
-  [PRODUCT_CATEGORIES.drinks]: 'Getränke'
-});
-
-const PRODUCT_CATEGORY_ORDER = Object.freeze([
-  PRODUCT_CATEGORIES.savory,
-  PRODUCT_CATEGORIES.sweet,
-  PRODUCT_CATEGORIES.drinks
-]);
-
-const PRODUCT_CATEGORY_MAP = Object.freeze({
-  ramen: PRODUCT_CATEGORIES.savory,
-  'reis mit curry': PRODUCT_CATEGORIES.savory,
-  'bento box': PRODUCT_CATEGORIES.savory,
-  onigiri: PRODUCT_CATEGORIES.savory,
-  omuraisu: PRODUCT_CATEGORIES.savory,
-  karaage: PRODUCT_CATEGORIES.savory,
-  dango: PRODUCT_CATEGORIES.sweet,
-  mochi: PRODUCT_CATEGORIES.sweet,
-  kuchen: PRODUCT_CATEGORIES.sweet,
-  'uwu cookie': PRODUCT_CATEGORIES.sweet,
-  'uwu wasser': PRODUCT_CATEGORIES.drinks,
-  'bubble tea': PRODUCT_CATEGORIES.drinks,
-  kaffee: PRODUCT_CATEGORIES.drinks,
-  'matcha latte': PRODUCT_CATEGORIES.drinks,
-  tee: PRODUCT_CATEGORIES.drinks
-});
 
 const CONFIRM_TYPES = Object.freeze({
   resetProducts: 'resetProducts',
@@ -83,7 +92,6 @@ const billList = document.getElementById('billList');
 const totalItems = document.getElementById('totalItems');
 const totalPrice = document.getElementById('totalPrice');
 const discountedPrice = document.getElementById('discountedPrice');
-const addProductBtn = document.getElementById('addProductBtn');
 const resetBtn = document.getElementById('resetBtn');
 const resetQtyBtn = document.getElementById('resetQtyBtn');
 const resetTipBtn = document.getElementById('resetTipBtn');
@@ -210,36 +218,41 @@ function sanitizeIntegerInputValue(value, max) {
   return String(normalized);
 }
 
-function isValidProductCategory(category) {
-  return PRODUCT_CATEGORY_ORDER.includes(category);
-}
-
-function inferProductCategory(product) {
-  const explicitCategory = String(product?.category || '').trim();
-  if (isValidProductCategory(explicitCategory)) return explicitCategory;
-
-  const normalizedName = normalizeProductName(product?.name);
-  return PRODUCT_CATEGORY_MAP[normalizedName] || PRODUCT_CATEGORIES.savory;
-}
-
-function sanitizeProduct(product) {
-  return {
-    name: sanitizeProductName(product?.name),
-    price: clampNumber(product?.price, 0, SECURITY_LIMITS.maxPrice, 0),
-    qty: Math.floor(clampNumber(product?.qty, 0, SECURITY_LIMITS.maxQty, 0)),
-    category: inferProductCategory(product)
-  };
-}
-
-function cloneDefaultProducts() {
-  return defaultProducts.map(product => ({ ...product }));
-}
-
 function normalizeProductName(name) {
   return String(name || '')
     .trim()
     .replace(/\s+/g, ' ')
     .toLocaleLowerCase('de-DE');
+}
+
+function inferCategoryByName(name) {
+  const normalized = normalizeProductName(name);
+  const match = Object.keys(DEFAULT_PRODUCT_CATEGORY_MAP).find(
+    key => normalizeProductName(key) === normalized
+  );
+  return match ? DEFAULT_PRODUCT_CATEGORY_MAP[match] : PRODUCT_CATEGORIES.savory;
+}
+
+function sanitizeCategory(category, fallbackName = '') {
+  const safeCategory = String(category || '').trim();
+  return CATEGORY_ORDER.includes(safeCategory) ? safeCategory : inferCategoryByName(fallbackName);
+}
+
+function sanitizeProduct(product) {
+  const safeName = sanitizeProductName(product?.name);
+  return {
+    name: safeName,
+    price: clampNumber(product?.price, 0, SECURITY_LIMITS.maxPrice, 0),
+    qty: Math.floor(clampNumber(product?.qty, 0, SECURITY_LIMITS.maxQty, 0)),
+    category: sanitizeCategory(product?.category, safeName)
+  };
+}
+
+function cloneDefaultProducts() {
+  return defaultProducts.map(product => sanitizeProduct({
+    ...product,
+    category: inferCategoryByName(product.name)
+  }));
 }
 
 function syncProductsWithDefaults(localProducts) {
@@ -557,209 +570,320 @@ function createField(labelText, input) {
   return wrap;
 }
 
+function createSelectField(labelText, selectElement) {
+  return createField(labelText, selectElement);
+}
+
+function createCategorySelect(index, currentCategory) {
+  const categorySelect = document.createElement('select');
+  categorySelect.autocomplete = 'off';
+  categorySelect.setAttribute('aria-label', 'Kategorie');
+  CATEGORY_ORDER.forEach(categoryKey => {
+    const option = document.createElement('option');
+    option.value = categoryKey;
+    option.textContent = CATEGORY_META[categoryKey].title;
+    option.selected = categoryKey === currentCategory;
+    categorySelect.appendChild(option);
+  });
+
+  categorySelect.addEventListener('change', event => {
+    moveProductToCategory(index, event.target.value);
+  });
+
+  return categorySelect;
+}
+
+function getCategoryProductIndexes(categoryKey) {
+  const indexes = [];
+  products.forEach((product, index) => {
+    if (sanitizeCategory(product.category, product.name) === categoryKey) indexes.push(index);
+  });
+  return indexes;
+}
 
 function moveProductWithinCategory(index, direction) {
-  const currentProduct = products[index];
-  if (!currentProduct) return;
+  const categoryKey = sanitizeCategory(products[index]?.category, products[index]?.name);
+  const indexes = getCategoryProductIndexes(categoryKey);
+  const position = indexes.indexOf(index);
+  if (position === -1) return;
 
-  const category = inferProductCategory(currentProduct);
-  const categoryIndexes = products
-    .map((product, productIndex) => (inferProductCategory(product) === category ? productIndex : -1))
-    .filter(productIndex => productIndex >= 0);
+  const targetIndex = indexes[position + direction];
+  if (typeof targetIndex !== 'number') return;
 
-  const currentPosition = categoryIndexes.indexOf(index);
-  const targetPosition = currentPosition + direction;
-  if (currentPosition < 0 || targetPosition < 0 || targetPosition >= categoryIndexes.length) return;
-
-  const targetIndex = categoryIndexes[targetPosition];
-  const updatedProducts = products.slice();
-  [updatedProducts[index], updatedProducts[targetIndex]] = [updatedProducts[targetIndex], updatedProducts[index]];
-  products = updatedProducts;
+  const [moved] = products.splice(index, 1);
+  const adjustedTargetIndex = index < targetIndex ? targetIndex - 1 : targetIndex;
+  products.splice(adjustedTargetIndex, 0, moved);
   saveProducts();
   renderProducts();
   renderBill();
   syncTipFromAmountReceived();
 }
 
+function moveProductToCategory(index, nextCategory) {
+  const safeCategory = sanitizeCategory(nextCategory, products[index]?.name);
+  if (!products[index]) return;
+
+  if (products[index].category === safeCategory) {
+    products[index].category = safeCategory;
+    saveProducts();
+    renderProducts();
+    renderBill();
+    syncTipFromAmountReceived();
+    return;
+  }
+
+  const [moved] = products.splice(index, 1);
+  moved.category = safeCategory;
+
+  let insertAt = products.length;
+  const categoryIndexes = getCategoryProductIndexes(safeCategory);
+
+  if (categoryIndexes.length) {
+    insertAt = categoryIndexes[categoryIndexes.length - 1] + 1;
+  } else {
+    const targetOrder = CATEGORY_ORDER.indexOf(safeCategory);
+    insertAt = products.findIndex(product => CATEGORY_ORDER.indexOf(sanitizeCategory(product.category, product.name)) > targetOrder);
+    if (insertAt < 0) insertAt = products.length;
+  }
+
+  products.splice(insertAt, 0, moved);
+  saveProducts();
+  renderProducts();
+  renderBill();
+  syncTipFromAmountReceived();
+}
+
+function addProductForCategory(categoryKey) {
+  if (products.length >= SECURITY_LIMITS.maxProducts) {
+    openInfoDialog('Limit erreicht', [`Es können maximal ${SECURITY_LIMITS.maxProducts} Produkte verwaltet werden.`]);
+    return;
+  }
+
+  const safeCategory = sanitizeCategory(categoryKey);
+  const newProduct = sanitizeProduct({
+    name: 'Neues Produkt',
+    price: 0,
+    qty: 0,
+    category: safeCategory
+  });
+
+  const categoryIndexes = getCategoryProductIndexes(safeCategory);
+  const insertAt = categoryIndexes.length ? categoryIndexes[categoryIndexes.length - 1] + 1 : products.length;
+  products.splice(insertAt, 0, newProduct);
+  saveProducts();
+  renderProducts();
+  renderBill();
+  syncTipFromAmountReceived();
+}
+
+function createSortField(index, categoryKey) {
+  const sortWrap = document.createElement('div');
+  sortWrap.className = 'sort-wrap';
+
+  const indexes = getCategoryProductIndexes(categoryKey);
+  const position = indexes.indexOf(index);
+
+  const upBtn = document.createElement('button');
+  upBtn.className = 'sort-btn';
+  upBtn.type = 'button';
+  upBtn.title = 'Produkt innerhalb der Kategorie nach oben verschieben';
+  upBtn.textContent = '↑';
+  upBtn.disabled = position <= 0;
+  upBtn.addEventListener('click', () => {
+    moveProductWithinCategory(index, -1);
+  });
+
+  const downBtn = document.createElement('button');
+  downBtn.className = 'sort-btn';
+  downBtn.type = 'button';
+  downBtn.title = 'Produkt innerhalb der Kategorie nach unten verschieben';
+  downBtn.textContent = '↓';
+  downBtn.disabled = position < 0 || position >= indexes.length - 1;
+  downBtn.addEventListener('click', () => {
+    moveProductWithinCategory(index, 1);
+  });
+
+  sortWrap.append(upBtn, downBtn);
+  return createField('Sortierung', sortWrap);
+}
+
+function createCategorySection(categoryKey, indexedProducts) {
+  const section = document.createElement('section');
+  section.className = 'category-group';
+
+  const header = document.createElement('div');
+  header.className = 'category-head';
+
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'category-title-wrap';
+
+  const title = document.createElement('h3');
+  title.className = 'category-title';
+  title.textContent = CATEGORY_META[categoryKey].title;
+
+  const count = document.createElement('span');
+  count.className = 'category-count';
+  count.textContent = `${indexedProducts.length} Produkt${indexedProducts.length === 1 ? '' : 'e'}`;
+
+  titleWrap.append(title, count);
+
+  const addButton = document.createElement('button');
+  addButton.className = 'btn soft category-add-btn';
+  addButton.type = 'button';
+  addButton.textContent = `＋ ${CATEGORY_META[categoryKey].addLabel}`;
+  addButton.addEventListener('click', () => {
+    addProductForCategory(categoryKey);
+  });
+
+  header.append(titleWrap, addButton);
+  section.appendChild(header);
+
+  const rows = document.createElement('div');
+  rows.className = 'category-rows';
+
+  indexedProducts.forEach(({ product, index }) => {
+    const row = document.createElement('div');
+    row.className = 'product-row';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = product.name;
+    nameInput.placeholder = 'Produktname';
+    nameInput.maxLength = SECURITY_LIMITS.maxProductNameLength;
+    nameInput.autocomplete = 'off';
+    nameInput.spellcheck = false;
+    nameInput.addEventListener('input', event => {
+      products[index].name = sanitizeProductName(event.target.value);
+      if (nameInput.value !== products[index].name) {
+        nameInput.value = products[index].name;
+      }
+      saveProducts();
+      renderBill();
+      syncTipFromAmountReceived();
+    });
+
+    const priceInput = document.createElement('input');
+    priceInput.type = 'number';
+    priceInput.step = '0.01';
+    priceInput.min = '0';
+    priceInput.value = String(product.price);
+    priceInput.max = String(SECURITY_LIMITS.maxPrice);
+    priceInput.inputMode = 'decimal';
+    priceInput.autocomplete = 'off';
+    priceInput.addEventListener('input', event => {
+      const safeValue = clampNumber(event.target.value, 0, SECURITY_LIMITS.maxPrice, 0);
+      products[index].price = safeValue;
+      const normalized = safeValue > 0 ? String(safeValue) : '0';
+      if (priceInput.value !== normalized && Number(priceInput.value) !== safeValue) {
+        priceInput.value = normalized;
+      }
+      saveProducts();
+      renderBill();
+      syncTipFromAmountReceived();
+    });
+
+    const qtyWrap = document.createElement('div');
+    qtyWrap.className = 'qty-wrap';
+    const qtyLabel = document.createElement('label');
+    qtyLabel.className = 'small';
+    qtyLabel.textContent = 'Menge';
+
+    const qtyControls = document.createElement('div');
+    qtyControls.className = 'qty-controls';
+
+    const minus = document.createElement('button');
+    minus.className = 'qty-btn';
+    minus.type = 'button';
+    minus.textContent = '−';
+    minus.addEventListener('click', () => {
+      products[index].qty = Math.max(0, Number(products[index].qty || 0) - 1);
+      saveProducts();
+      renderProducts();
+      renderBill();
+      syncTipFromAmountReceived();
+    });
+
+    const qtyInput = document.createElement('input');
+    qtyInput.type = 'number';
+    qtyInput.min = '0';
+    qtyInput.step = '1';
+    qtyInput.value = String(product.qty);
+    qtyInput.max = String(SECURITY_LIMITS.maxQty);
+    qtyInput.inputMode = 'numeric';
+    qtyInput.autocomplete = 'off';
+    qtyInput.addEventListener('input', event => {
+      const safeValue = Math.floor(clampNumber(event.target.value, 0, SECURITY_LIMITS.maxQty, 0));
+      products[index].qty = safeValue;
+      const normalized = String(safeValue);
+      if (qtyInput.value !== normalized && Number(qtyInput.value) !== safeValue) {
+        qtyInput.value = normalized;
+      }
+      saveProducts();
+      renderBill();
+      syncTipFromAmountReceived();
+    });
+
+    const plus = document.createElement('button');
+    plus.className = 'qty-btn';
+    plus.type = 'button';
+    plus.textContent = '+';
+    plus.addEventListener('click', () => {
+      products[index].qty = Math.min(SECURITY_LIMITS.maxQty, Number(products[index].qty || 0) + 1);
+      saveProducts();
+      renderProducts();
+      renderBill();
+      syncTipFromAmountReceived();
+    });
+
+    qtyControls.append(minus, qtyInput, plus);
+    qtyWrap.append(qtyLabel, qtyControls);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn';
+    delBtn.type = 'button';
+    delBtn.title = 'Produkt entfernen';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', () => {
+      products.splice(index, 1);
+      saveProducts();
+      renderProducts();
+      renderBill();
+      syncTipFromAmountReceived();
+    });
+
+    row.append(
+      createField('Produkt', nameInput),
+      createField('Preis', priceInput),
+      qtyWrap,
+      createSelectField('Kategorie', createCategorySelect(index, product.category)),
+      createSortField(index, product.category),
+      delBtn
+    );
+
+    rows.appendChild(row);
+  });
+
+  if (!indexedProducts.length) {
+    const empty = document.createElement('div');
+    empty.className = 'category-empty';
+    empty.textContent = 'Noch keine Produkte in dieser Kategorie ✦';
+    rows.appendChild(empty);
+  }
+
+  section.appendChild(rows);
+  return section;
+}
+
 function renderProducts() {
   productList.replaceChildren();
 
-  const fragment = document.createDocumentFragment();
-
-  PRODUCT_CATEGORY_ORDER.forEach(category => {
-    const categoryProducts = products
+  CATEGORY_ORDER.forEach(categoryKey => {
+    const indexedProducts = products
       .map((product, index) => ({ product, index }))
-      .filter(entry => inferProductCategory(entry.product) === category);
+      .filter(entry => sanitizeCategory(entry.product.category, entry.product.name) === categoryKey);
 
-    if (!categoryProducts.length) return;
-
-    const group = document.createElement('section');
-    group.className = 'product-group';
-    group.setAttribute('data-category', category);
-
-    const heading = document.createElement('h3');
-    heading.className = 'product-group-title';
-    heading.textContent = PRODUCT_CATEGORY_LABELS[category] || category;
-
-    const rows = document.createElement('div');
-    rows.className = 'product-group-rows';
-
-    categoryProducts.forEach(({ product, index }, categoryIndex) => {
-      const row = document.createElement('div');
-      row.className = 'product-row';
-
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = product.name;
-      nameInput.placeholder = 'Produktname';
-      nameInput.maxLength = SECURITY_LIMITS.maxProductNameLength;
-      nameInput.autocomplete = 'off';
-      nameInput.spellcheck = false;
-      nameInput.addEventListener('input', event => {
-        products[index].name = sanitizeProductName(event.target.value);
-        if (nameInput.value !== products[index].name) {
-          nameInput.value = products[index].name;
-        }
-        saveProducts();
-        renderBill();
-        syncTipFromAmountReceived();
-      });
-
-      const priceInput = document.createElement('input');
-      priceInput.type = 'number';
-      priceInput.step = '0.01';
-      priceInput.min = '0';
-      priceInput.value = String(product.price);
-      priceInput.max = String(SECURITY_LIMITS.maxPrice);
-      priceInput.inputMode = 'decimal';
-      priceInput.autocomplete = 'off';
-      priceInput.addEventListener('input', event => {
-        const safeValue = clampNumber(event.target.value, 0, SECURITY_LIMITS.maxPrice, 0);
-        products[index].price = safeValue;
-        const normalized = safeValue > 0 ? String(safeValue) : '0';
-        if (priceInput.value !== normalized && Number(priceInput.value) !== safeValue) {
-          priceInput.value = normalized;
-        }
-        saveProducts();
-        renderBill();
-        syncTipFromAmountReceived();
-      });
-
-      const qtyWrap = document.createElement('div');
-      qtyWrap.className = 'qty-wrap';
-      const qtyLabel = document.createElement('label');
-      qtyLabel.className = 'small';
-      qtyLabel.textContent = 'Menge';
-
-      const qtyControls = document.createElement('div');
-      qtyControls.className = 'qty-controls';
-
-      const minus = document.createElement('button');
-      minus.className = 'qty-btn';
-      minus.type = 'button';
-      minus.textContent = '−';
-      minus.addEventListener('click', () => {
-        products[index].qty = Math.max(0, Number(products[index].qty || 0) - 1);
-        saveProducts();
-        renderProducts();
-        renderBill();
-        syncTipFromAmountReceived();
-      });
-
-      const qtyInput = document.createElement('input');
-      qtyInput.type = 'number';
-      qtyInput.min = '0';
-      qtyInput.step = '1';
-      qtyInput.value = String(product.qty);
-      qtyInput.max = String(SECURITY_LIMITS.maxQty);
-      qtyInput.inputMode = 'numeric';
-      qtyInput.autocomplete = 'off';
-      qtyInput.addEventListener('input', event => {
-        const safeValue = Math.floor(clampNumber(event.target.value, 0, SECURITY_LIMITS.maxQty, 0));
-        products[index].qty = safeValue;
-        const normalized = String(safeValue);
-        if (qtyInput.value !== normalized && Number(qtyInput.value) !== safeValue) {
-          qtyInput.value = normalized;
-        }
-        saveProducts();
-        renderBill();
-        syncTipFromAmountReceived();
-      });
-
-      const plus = document.createElement('button');
-      plus.className = 'qty-btn';
-      plus.type = 'button';
-      plus.textContent = '+';
-      plus.addEventListener('click', () => {
-        products[index].qty = Math.min(SECURITY_LIMITS.maxQty, Number(products[index].qty || 0) + 1);
-        saveProducts();
-        renderProducts();
-        renderBill();
-        syncTipFromAmountReceived();
-      });
-
-      qtyControls.append(minus, qtyInput, plus);
-      qtyWrap.append(qtyLabel, qtyControls);
-
-      const moveWrap = document.createElement('div');
-      moveWrap.className = 'reorder-wrap';
-      const moveLabel = document.createElement('div');
-      moveLabel.className = 'small reorder-label';
-      moveLabel.textContent = 'Sortierung';
-
-      const moveControls = document.createElement('div');
-      moveControls.className = 'reorder-controls';
-
-      const moveUpBtn = document.createElement('button');
-      moveUpBtn.className = 'icon-btn reorder-btn';
-      moveUpBtn.type = 'button';
-      moveUpBtn.title = 'Produkt innerhalb der Gruppe nach oben verschieben';
-      moveUpBtn.textContent = '↑';
-      moveUpBtn.disabled = categoryIndex === 0;
-      moveUpBtn.setAttribute('aria-disabled', String(categoryIndex === 0));
-      moveUpBtn.addEventListener('click', () => moveProductWithinCategory(index, -1));
-
-      const moveDownBtn = document.createElement('button');
-      moveDownBtn.className = 'icon-btn reorder-btn';
-      moveDownBtn.type = 'button';
-      moveDownBtn.title = 'Produkt innerhalb der Gruppe nach unten verschieben';
-      moveDownBtn.textContent = '↓';
-      moveDownBtn.disabled = categoryIndex === categoryProducts.length - 1;
-      moveDownBtn.setAttribute('aria-disabled', String(categoryIndex === categoryProducts.length - 1));
-      moveDownBtn.addEventListener('click', () => moveProductWithinCategory(index, 1));
-
-      moveControls.append(moveUpBtn, moveDownBtn);
-      moveWrap.append(moveLabel, moveControls);
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'icon-btn delete-btn';
-      delBtn.type = 'button';
-      delBtn.title = 'Produkt entfernen';
-      delBtn.textContent = '✕';
-      delBtn.addEventListener('click', () => {
-        products.splice(index, 1);
-        saveProducts();
-        renderProducts();
-        renderBill();
-        syncTipFromAmountReceived();
-      });
-
-      row.append(
-        createField('Produkt', nameInput),
-        createField('Preis', priceInput),
-        qtyWrap,
-        moveWrap,
-        delBtn
-      );
-
-      rows.appendChild(row);
-    });
-
-    group.append(heading, rows);
-    fragment.appendChild(group);
+    productList.appendChild(createCategorySection(categoryKey, indexedProducts));
   });
-
-  productList.appendChild(fragment);
 }
 
 function renderBill() {
@@ -946,18 +1070,6 @@ addTipBtn.addEventListener('click', () => {
   tipTotalValue = clampNumber(tipTotalValue + value, 0, SECURITY_LIMITS.maxTipTotal, tipTotalValue);
   saveTipTotal();
   updateTipUi();
-  renderBill();
-  syncTipFromAmountReceived();
-});
-
-addProductBtn.addEventListener('click', () => {
-  if (products.length >= SECURITY_LIMITS.maxProducts) {
-    openInfoDialog('Limit erreicht', [`Es können maximal ${SECURITY_LIMITS.maxProducts} Produkte verwaltet werden.`]);
-    return;
-  }
-  products.push({ name: 'Neues Produkt', price: 0, qty: 0, category: PRODUCT_CATEGORIES.savory });
-  saveProducts();
-  renderProducts();
   renderBill();
   syncTipFromAmountReceived();
 });
