@@ -90,7 +90,7 @@
 	  radial-gradient(circle at top left, var(--bg-grad-1), transparent 30%),
 	  radial-gradient(circle at bottom right, var(--bg-grad-2), transparent 28%),
 	  linear-gradient(180deg, var(--bg-base-1) 0%, var(--bg-base-2) 100%);
-	padding: clamp(8px, 1.4vw, 18px) clamp(12px, 2.6vw, 34px) clamp(12px, 2.6vw, 34px);
+	padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 	transition: background 0.25s ease, color 0.25s ease;
   }
 
@@ -102,17 +102,19 @@
 	gap: 12px;
 	align-items: start;
 	position: relative;
+	padding-top: 0;
   }
 
   .topbar {
 	position: fixed;
-	top: 10px;
-	right: 12px;
+	top: max(10px, env(safe-area-inset-top));
+	right: max(12px, env(safe-area-inset-right));
 	z-index: 50;
 	margin: 0;
 	display: flex;
 	justify-content: flex-end;
 	width: auto;
+	max-width: calc(100vw - max(24px, env(safe-area-inset-left) + env(safe-area-inset-right)));
   }
 
   .theme-toggle {
@@ -130,6 +132,7 @@
 	-webkit-backdrop-filter: blur(14px);
 	cursor: pointer;
 	transition: transform 0.14s ease, filter 0.14s ease, background 0.25s ease, color 0.25s ease;
+	max-width: min(320px, calc(100vw - 24px));
   }
 
   .theme-toggle:hover,
@@ -185,6 +188,7 @@
 	align-items: center;
 	padding: 0;
 	margin: 0 0 2px;
+	min-height: 0;
   }
 
   .header-logo {
@@ -608,58 +612,89 @@
 	display: none !important;
   }
 
+  body.modal-open {
+	overflow: hidden;
+  }
+
   .modal-backdrop {
 	position: fixed;
 	inset: 0;
 	z-index: 1000;
 	display: grid;
 	place-items: center;
-	padding: 18px;
-	background: rgba(18, 12, 18, 0.46);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
+	padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+	background: rgba(18, 12, 18, 0.28);
+	backdrop-filter: blur(0px);
+	-webkit-backdrop-filter: blur(0px);
+	overflow: auto;
 	opacity: 0;
-	visibility: hidden;
 	pointer-events: none;
 	transition:
-	  opacity 0.22s ease,
-	  visibility 0.22s ease,
-	  background 0.22s ease;
+	  opacity 0.34s ease,
+	  background 0.34s ease,
+	  backdrop-filter 0.42s ease,
+	  -webkit-backdrop-filter 0.42s ease;
   }
 
-  .modal-backdrop.hidden {
-	display: grid !important;
-	opacity: 0;
-	visibility: hidden;
-	pointer-events: none;
-  }
-
-  .modal-backdrop.is-open {
+  .modal-backdrop.show {
 	opacity: 1;
-	visibility: visible;
 	pointer-events: auto;
+	background: rgba(18, 12, 18, 0.46);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+  }
+
+  .modal-backdrop.closing {
+	pointer-events: none;
   }
 
   .modal {
 	width: min(520px, 100%);
 	padding: 24px;
-	background: var(--panel-strong);
-	border: 1px solid var(--panel-border);
+	background: color-mix(in srgb, var(--panel-strong) 88%, rgba(255, 255, 255, 0.08));
+	border: 1px solid color-mix(in srgb, var(--panel-border) 84%, rgba(255, 255, 255, 0.14));
+	box-shadow:
+	  0 24px 68px rgba(12, 8, 15, 0.42),
+	  inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	max-height: min(calc(100dvh - 36px), 100%);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 	opacity: 0;
-	transform: translateY(10px) scale(0.985);
+	transform: translateY(26px) scale(0.94);
+	filter: blur(10px);
 	transition:
-	  opacity 0.22s ease,
-	  transform 0.22s ease;
-	will-change: opacity, transform;
+	  opacity 0.30s ease,
+	  transform 0.52s cubic-bezier(0.22, 1.2, 0.3, 1),
+	  filter 0.38s ease,
+	  box-shadow 0.38s ease,
+	  background 0.25s ease,
+	  border-color 0.25s ease;
   }
 
-  .modal-backdrop.is-open .modal {
+  .modal-backdrop.show .modal {
 	opacity: 1;
 	transform: translateY(0) scale(1);
+	filter: blur(0);
+  }
+
+  .modal-backdrop.closing .modal {
+	opacity: 0;
+	transform: translateY(18px) scale(0.97);
+	filter: blur(8px);
   }
 
   #orderModal .modal {
 	width: min(860px, calc(100vw - 36px));
+	max-height: min(calc(100dvh - 24px), 100%);
+  }
+
+
+  #orderMessage {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: 4px;
   }
 
   .modal-head {
@@ -677,6 +712,7 @@
 	color: var(--muted);
 	line-height: 1.6;
 	white-space: pre-line;
+	overflow-wrap: anywhere;
   }
 
   .modal-options {
@@ -688,6 +724,11 @@
 	flex-wrap: wrap;
 	gap: 12px;
 	margin-top: 22px;
+	padding-top: 12px;
+	flex-shrink: 0;
+	position: sticky;
+	bottom: 0;
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0), var(--panel-strong) 28%);
   }
 
   .modal-actions .btn {
@@ -709,6 +750,7 @@
 	display: grid;
 	gap: 18px;
 	margin-top: 16px;
+	min-height: 0;
   }
 
   .order-summary-list {
@@ -720,6 +762,7 @@
 	padding-right: 6px;
 	scrollbar-width: thin;
 	scrollbar-color: var(--accent-strong) transparent;
+	min-height: 0;
   }
 
   .order-summary-list::-webkit-scrollbar {
@@ -816,14 +859,17 @@
 
   @media (max-width: 920px) {
 	.topbar {
-	  top: 10px;
-	  right: 10px;
-	  width: auto;
+	  position: static;
+	  top: auto;
+	  right: auto;
+	  width: 100%;
 	  justify-content: flex-end;
+	  margin-bottom: 6px;
 	}
 
 	.theme-toggle {
 	  min-height: 42px;
+	  max-width: min(300px, 100%);
 	}
 
 	.product-row {
@@ -834,6 +880,7 @@
 
 	#orderModal .modal {
 	  width: min(92vw, 860px);
+	  max-height: calc(100dvh - 20px);
 	}
 
 	.qty-controls {
@@ -870,7 +917,7 @@
 
   @media (max-width: 680px) {
 	body {
-	  padding: 10px 12px 12px;
+	  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 	}
 
 	.section {
@@ -878,14 +925,16 @@
 	}
 
 	.topbar {
-	  position: fixed;
-	  top: 8px;
-	  right: 8px;
-	  margin: 0;
+	  position: static;
+	  top: auto;
+	  right: auto;
+	  margin: 0 0 4px;
 	}
 
 	.theme-toggle {
 	  padding: 8px 12px;
+	  width: auto;
+	  max-width: 100%;
 	}
 
 	.header-logo {
@@ -999,6 +1048,55 @@
 	  white-space: normal;
 	}
   }
+  @media (orientation: landscape) and (max-height: 560px) {
+	.topbar {
+	  position: static;
+	  width: 100%;
+	  justify-content: flex-end;
+	  margin-bottom: 4px;
+	}
+
+	.logo-header {
+	  margin-bottom: 0;
+	}
+
+	.header-logo {
+	  width: clamp(120px, 18vh, 156px);
+	  height: clamp(120px, 18vh, 156px);
+	}
+
+	.modal-backdrop {
+	  place-items: start center;
+	  padding-top: max(10px, env(safe-area-inset-top));
+	  padding-bottom: max(10px, env(safe-area-inset-bottom));
+	}
+
+	.modal {
+	  width: min(96vw, 860px);
+	  max-height: calc(100dvh - 20px);
+	}
+
+	#orderModal .modal {
+	  width: min(96vw, 960px);
+	}
+
+	.order-summary-list {
+	  max-height: min(32dvh, 240px);
+	}
+  }
+
+
+  @media (prefers-reduced-motion: reduce) {
+	.modal-backdrop,
+	.modal,
+	.theme-toggle,
+	.qty-btn,
+	.btn,
+	.icon-btn {
+	  transition: none !important;
+	}
+  }
+
   </style>
 </head>
 <body>
@@ -1406,65 +1504,58 @@
       applyTheme();
     }
 
-    const MODAL_ANIMATION_MS = 220;
-
-    function anyModalVisible() {
-      return [confirmModal, infoModal, orderModal].some(modal => !modal.classList.contains('hidden'));
-    }
-
-    function updateBodyScrollLock() {
-      document.body.style.overflow = anyModalVisible() ? 'hidden' : '';
-    }
-
-    function showModal(modal, focusTarget) {
-      if (!modal) return;
-
-      if (modal._hideTimer) {
-        clearTimeout(modal._hideTimer);
-        modal._hideTimer = null;
-      }
-
-      modal.classList.remove('hidden');
-      modal.setAttribute('aria-hidden', 'false');
-
-      requestAnimationFrame(() => {
-        modal.classList.add('is-open');
-      });
-
-      updateBodyScrollLock();
-
-      if (focusTarget) {
-        setTimeout(() => {
-          focusTarget.focus();
-        }, 30);
-      }
-    }
-
-    function hideModal(modal) {
-      if (!modal || modal.classList.contains('hidden')) return;
-
-      modal.classList.remove('is-open');
-      modal.setAttribute('aria-hidden', 'true');
-
-      if (modal._hideTimer) {
-        clearTimeout(modal._hideTimer);
-      }
-
-      modal._hideTimer = setTimeout(() => {
-        modal.classList.add('hidden');
-        modal._hideTimer = null;
-        updateBodyScrollLock();
-      }, MODAL_ANIMATION_MS);
-
-      updateBodyScrollLock();
-    }
-
     function runConfirmedAction(confirmType, title, message, onConfirm) {
       if (confirmPrefs[confirmType]) {
         onConfirm();
         return;
       }
       openConfirmDialog(confirmType, title, message, onConfirm);
+    }
+
+    const MODAL_ANIMATION_MS = 360;
+
+    function syncBodyModalState() {
+      const hasVisibleModal = [confirmModal, infoModal, orderModal].some(modal => !modal.classList.contains('hidden'));
+      document.body.classList.toggle('modal-open', hasVisibleModal);
+    }
+
+    function focusModalPrimaryAction(modal, focusTarget) {
+      window.setTimeout(() => {
+        if (!modal.classList.contains('hidden') && focusTarget) {
+          focusTarget.focus();
+        }
+      }, 80);
+    }
+
+    function openAnimatedModal(modal, focusTarget) {
+      modal.classList.remove('hidden', 'closing');
+      modal.setAttribute('aria-hidden', 'false');
+      syncBodyModalState();
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          modal.classList.add('show');
+        });
+      });
+
+      focusModalPrimaryAction(modal, focusTarget);
+    }
+
+    function closeAnimatedModal(modal, onClosed) {
+      if (modal.classList.contains('hidden') || modal.classList.contains('closing')) {
+        return;
+      }
+
+      modal.classList.remove('show');
+      modal.classList.add('closing');
+      modal.setAttribute('aria-hidden', 'true');
+
+      window.setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('closing');
+        syncBodyModalState();
+        if (typeof onClosed === 'function') onClosed();
+      }, MODAL_ANIMATION_MS);
     }
 
     function openConfirmDialog(confirmType, title, message, onConfirm) {
@@ -1475,7 +1566,7 @@
       confirmSkipCheckbox.checked = false;
       confirmAcceptBtn.textContent = 'Ja, ich bin sicher';
       confirmCancelBtn.textContent = 'Nein';
-      showModal(confirmModal, confirmAcceptBtn);
+      openAnimatedModal(confirmModal, confirmAcceptBtn);
     }
 
     function openWarningContinueDialog(title, message, onConfirm) {
@@ -1486,16 +1577,17 @@
       confirmSkipCheckbox.checked = false;
       confirmAcceptBtn.textContent = 'Ja, fortfahren';
       confirmCancelBtn.textContent = 'Nein';
-      showModal(confirmModal, confirmAcceptBtn);
+      openAnimatedModal(confirmModal, confirmAcceptBtn);
     }
 
     function closeConfirmDialog() {
-      pendingConfirmAction = null;
-      pendingConfirmType = null;
-      confirmSkipCheckbox.checked = false;
-      confirmAcceptBtn.textContent = 'Ja, ich bin sicher';
-      confirmCancelBtn.textContent = 'Nein';
-      hideModal(confirmModal);
+      closeAnimatedModal(confirmModal, () => {
+        pendingConfirmAction = null;
+        pendingConfirmType = null;
+        confirmSkipCheckbox.checked = false;
+        confirmAcceptBtn.textContent = 'Ja, ich bin sicher';
+        confirmCancelBtn.textContent = 'Nein';
+      });
     }
 
 
@@ -1508,11 +1600,11 @@
         <p class="modal-text">Neue Produkte wurden zur Liste hinzugefügt:</p>
         <ul class="info-list">${names.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>
       `;
-      showModal(infoModal, infoCloseBtn);
+      openAnimatedModal(infoModal, infoCloseBtn);
     }
 
     function closeInfoDialog() {
-      hideModal(infoModal);
+      closeAnimatedModal(infoModal);
     }
 
     function resetAllQty() {
@@ -1780,11 +1872,11 @@
         orderMessage.innerHTML = `<div class="order-summary-shell"><div class="order-summary-list">${rows}</div>${totals}</div>`;
       }
 
-      showModal(orderModal, orderCloseBtn);
+      openAnimatedModal(orderModal, orderCloseBtn);
     }
 
     function closeOrderDialog() {
-      hideModal(orderModal);
+      closeAnimatedModal(orderModal);
     }
 
     discountEnabled.addEventListener('change', (e) => {
