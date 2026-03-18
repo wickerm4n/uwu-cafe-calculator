@@ -10,7 +10,7 @@ const defaultProducts = [
   { name: 'Ramen', price: 25, qty: 0 },
   { name: 'Reis mit Curry', price: 25, qty: 0 },
   { name: 'Bento Box', price: 25, qty: 0 },
-  { name: 'Onigiri', price: 15, qty: 0 },  
+  { name: 'Onigiri', price: 15, qty: 0 },
   { name: 'Omuraisu', price: 15, qty: 0 },
   { name: 'Karaage', price: 15, qty: 0 },
   { name: 'Dango', price: 15, qty: 0 },
@@ -23,6 +23,42 @@ const defaultProducts = [
   { name: 'Tee', price: 10, qty: 0 },
   { name: 'UwU Cookie', price: 0, qty: 0 }
 ];
+
+const PRODUCT_CATEGORIES = Object.freeze({
+  savory: 'savory',
+  sweet: 'sweet',
+  drinks: 'drinks'
+});
+
+const PRODUCT_CATEGORY_LABELS = Object.freeze({
+  [PRODUCT_CATEGORIES.savory]: 'Herzhafte Speisen',
+  [PRODUCT_CATEGORIES.sweet]: 'Süßspeisen / Desserts',
+  [PRODUCT_CATEGORIES.drinks]: 'Getränke'
+});
+
+const PRODUCT_CATEGORY_ORDER = Object.freeze([
+  PRODUCT_CATEGORIES.savory,
+  PRODUCT_CATEGORIES.sweet,
+  PRODUCT_CATEGORIES.drinks
+]);
+
+const PRODUCT_CATEGORY_MAP = Object.freeze({
+  ramen: PRODUCT_CATEGORIES.savory,
+  'reis mit curry': PRODUCT_CATEGORIES.savory,
+  'bento box': PRODUCT_CATEGORIES.savory,
+  onigiri: PRODUCT_CATEGORIES.savory,
+  omuraisu: PRODUCT_CATEGORIES.savory,
+  karaage: PRODUCT_CATEGORIES.savory,
+  dango: PRODUCT_CATEGORIES.sweet,
+  mochi: PRODUCT_CATEGORIES.sweet,
+  kuchen: PRODUCT_CATEGORIES.sweet,
+  'uwu cookie': PRODUCT_CATEGORIES.sweet,
+  'uwu wasser': PRODUCT_CATEGORIES.drinks,
+  'bubble tea': PRODUCT_CATEGORIES.drinks,
+  kaffee: PRODUCT_CATEGORIES.drinks,
+  'matcha latte': PRODUCT_CATEGORIES.drinks,
+  tee: PRODUCT_CATEGORIES.drinks
+});
 
 const CONFIRM_TYPES = Object.freeze({
   resetProducts: 'resetProducts',
@@ -174,11 +210,24 @@ function sanitizeIntegerInputValue(value, max) {
   return String(normalized);
 }
 
+function isValidProductCategory(category) {
+  return PRODUCT_CATEGORY_ORDER.includes(category);
+}
+
+function inferProductCategory(product) {
+  const explicitCategory = String(product?.category || '').trim();
+  if (isValidProductCategory(explicitCategory)) return explicitCategory;
+
+  const normalizedName = normalizeProductName(product?.name);
+  return PRODUCT_CATEGORY_MAP[normalizedName] || PRODUCT_CATEGORIES.savory;
+}
+
 function sanitizeProduct(product) {
   return {
     name: sanitizeProductName(product?.name),
     price: clampNumber(product?.price, 0, SECURITY_LIMITS.maxPrice, 0),
-    qty: Math.floor(clampNumber(product?.qty, 0, SECURITY_LIMITS.maxQty, 0))
+    qty: Math.floor(clampNumber(product?.qty, 0, SECURITY_LIMITS.maxQty, 0)),
+    category: inferProductCategory(product)
   };
 }
 
@@ -508,128 +557,209 @@ function createField(labelText, input) {
   return wrap;
 }
 
+
+function moveProductWithinCategory(index, direction) {
+  const currentProduct = products[index];
+  if (!currentProduct) return;
+
+  const category = inferProductCategory(currentProduct);
+  const categoryIndexes = products
+    .map((product, productIndex) => (inferProductCategory(product) === category ? productIndex : -1))
+    .filter(productIndex => productIndex >= 0);
+
+  const currentPosition = categoryIndexes.indexOf(index);
+  const targetPosition = currentPosition + direction;
+  if (currentPosition < 0 || targetPosition < 0 || targetPosition >= categoryIndexes.length) return;
+
+  const targetIndex = categoryIndexes[targetPosition];
+  const updatedProducts = products.slice();
+  [updatedProducts[index], updatedProducts[targetIndex]] = [updatedProducts[targetIndex], updatedProducts[index]];
+  products = updatedProducts;
+  saveProducts();
+  renderProducts();
+  renderBill();
+  syncTipFromAmountReceived();
+}
+
 function renderProducts() {
   productList.replaceChildren();
 
-  products.forEach((product, index) => {
-    const row = document.createElement('div');
-    row.className = 'product-row';
+  const fragment = document.createDocumentFragment();
 
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.value = product.name;
-    nameInput.placeholder = 'Produktname';
-    nameInput.maxLength = SECURITY_LIMITS.maxProductNameLength;
-    nameInput.autocomplete = 'off';
-    nameInput.spellcheck = false;
-    nameInput.addEventListener('input', event => {
-      products[index].name = sanitizeProductName(event.target.value);
-      if (nameInput.value !== products[index].name) {
-        nameInput.value = products[index].name;
-      }
-      saveProducts();
-      renderBill();
-      syncTipFromAmountReceived();
+  PRODUCT_CATEGORY_ORDER.forEach(category => {
+    const categoryProducts = products
+      .map((product, index) => ({ product, index }))
+      .filter(entry => inferProductCategory(entry.product) === category);
+
+    if (!categoryProducts.length) return;
+
+    const group = document.createElement('section');
+    group.className = 'product-group';
+    group.setAttribute('data-category', category);
+
+    const heading = document.createElement('h3');
+    heading.className = 'product-group-title';
+    heading.textContent = PRODUCT_CATEGORY_LABELS[category] || category;
+
+    const rows = document.createElement('div');
+    rows.className = 'product-group-rows';
+
+    categoryProducts.forEach(({ product, index }, categoryIndex) => {
+      const row = document.createElement('div');
+      row.className = 'product-row';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = product.name;
+      nameInput.placeholder = 'Produktname';
+      nameInput.maxLength = SECURITY_LIMITS.maxProductNameLength;
+      nameInput.autocomplete = 'off';
+      nameInput.spellcheck = false;
+      nameInput.addEventListener('input', event => {
+        products[index].name = sanitizeProductName(event.target.value);
+        if (nameInput.value !== products[index].name) {
+          nameInput.value = products[index].name;
+        }
+        saveProducts();
+        renderBill();
+        syncTipFromAmountReceived();
+      });
+
+      const priceInput = document.createElement('input');
+      priceInput.type = 'number';
+      priceInput.step = '0.01';
+      priceInput.min = '0';
+      priceInput.value = String(product.price);
+      priceInput.max = String(SECURITY_LIMITS.maxPrice);
+      priceInput.inputMode = 'decimal';
+      priceInput.autocomplete = 'off';
+      priceInput.addEventListener('input', event => {
+        const safeValue = clampNumber(event.target.value, 0, SECURITY_LIMITS.maxPrice, 0);
+        products[index].price = safeValue;
+        const normalized = safeValue > 0 ? String(safeValue) : '0';
+        if (priceInput.value !== normalized && Number(priceInput.value) !== safeValue) {
+          priceInput.value = normalized;
+        }
+        saveProducts();
+        renderBill();
+        syncTipFromAmountReceived();
+      });
+
+      const qtyWrap = document.createElement('div');
+      qtyWrap.className = 'qty-wrap';
+      const qtyLabel = document.createElement('label');
+      qtyLabel.className = 'small';
+      qtyLabel.textContent = 'Menge';
+
+      const qtyControls = document.createElement('div');
+      qtyControls.className = 'qty-controls';
+
+      const minus = document.createElement('button');
+      minus.className = 'qty-btn';
+      minus.type = 'button';
+      minus.textContent = '−';
+      minus.addEventListener('click', () => {
+        products[index].qty = Math.max(0, Number(products[index].qty || 0) - 1);
+        saveProducts();
+        renderProducts();
+        renderBill();
+        syncTipFromAmountReceived();
+      });
+
+      const qtyInput = document.createElement('input');
+      qtyInput.type = 'number';
+      qtyInput.min = '0';
+      qtyInput.step = '1';
+      qtyInput.value = String(product.qty);
+      qtyInput.max = String(SECURITY_LIMITS.maxQty);
+      qtyInput.inputMode = 'numeric';
+      qtyInput.autocomplete = 'off';
+      qtyInput.addEventListener('input', event => {
+        const safeValue = Math.floor(clampNumber(event.target.value, 0, SECURITY_LIMITS.maxQty, 0));
+        products[index].qty = safeValue;
+        const normalized = String(safeValue);
+        if (qtyInput.value !== normalized && Number(qtyInput.value) !== safeValue) {
+          qtyInput.value = normalized;
+        }
+        saveProducts();
+        renderBill();
+        syncTipFromAmountReceived();
+      });
+
+      const plus = document.createElement('button');
+      plus.className = 'qty-btn';
+      plus.type = 'button';
+      plus.textContent = '+';
+      plus.addEventListener('click', () => {
+        products[index].qty = Math.min(SECURITY_LIMITS.maxQty, Number(products[index].qty || 0) + 1);
+        saveProducts();
+        renderProducts();
+        renderBill();
+        syncTipFromAmountReceived();
+      });
+
+      qtyControls.append(minus, qtyInput, plus);
+      qtyWrap.append(qtyLabel, qtyControls);
+
+      const moveWrap = document.createElement('div');
+      moveWrap.className = 'reorder-wrap';
+      const moveLabel = document.createElement('div');
+      moveLabel.className = 'small reorder-label';
+      moveLabel.textContent = 'Sortierung';
+
+      const moveControls = document.createElement('div');
+      moveControls.className = 'reorder-controls';
+
+      const moveUpBtn = document.createElement('button');
+      moveUpBtn.className = 'icon-btn reorder-btn';
+      moveUpBtn.type = 'button';
+      moveUpBtn.title = 'Produkt innerhalb der Gruppe nach oben verschieben';
+      moveUpBtn.textContent = '↑';
+      moveUpBtn.disabled = categoryIndex === 0;
+      moveUpBtn.setAttribute('aria-disabled', String(categoryIndex === 0));
+      moveUpBtn.addEventListener('click', () => moveProductWithinCategory(index, -1));
+
+      const moveDownBtn = document.createElement('button');
+      moveDownBtn.className = 'icon-btn reorder-btn';
+      moveDownBtn.type = 'button';
+      moveDownBtn.title = 'Produkt innerhalb der Gruppe nach unten verschieben';
+      moveDownBtn.textContent = '↓';
+      moveDownBtn.disabled = categoryIndex === categoryProducts.length - 1;
+      moveDownBtn.setAttribute('aria-disabled', String(categoryIndex === categoryProducts.length - 1));
+      moveDownBtn.addEventListener('click', () => moveProductWithinCategory(index, 1));
+
+      moveControls.append(moveUpBtn, moveDownBtn);
+      moveWrap.append(moveLabel, moveControls);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'icon-btn delete-btn';
+      delBtn.type = 'button';
+      delBtn.title = 'Produkt entfernen';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', () => {
+        products.splice(index, 1);
+        saveProducts();
+        renderProducts();
+        renderBill();
+        syncTipFromAmountReceived();
+      });
+
+      row.append(
+        createField('Produkt', nameInput),
+        createField('Preis', priceInput),
+        qtyWrap,
+        moveWrap,
+        delBtn
+      );
+
+      rows.appendChild(row);
     });
 
-    const priceInput = document.createElement('input');
-    priceInput.type = 'number';
-    priceInput.step = '0.01';
-    priceInput.min = '0';
-    priceInput.value = String(product.price);
-    priceInput.max = String(SECURITY_LIMITS.maxPrice);
-    priceInput.inputMode = 'decimal';
-    priceInput.autocomplete = 'off';
-    priceInput.addEventListener('input', event => {
-      const safeValue = clampNumber(event.target.value, 0, SECURITY_LIMITS.maxPrice, 0);
-      products[index].price = safeValue;
-      const normalized = safeValue > 0 ? String(safeValue) : '0';
-      if (priceInput.value !== normalized && Number(priceInput.value) !== safeValue) {
-        priceInput.value = normalized;
-      }
-      saveProducts();
-      renderBill();
-      syncTipFromAmountReceived();
-    });
-
-    const qtyWrap = document.createElement('div');
-    qtyWrap.className = 'qty-wrap';
-    const qtyLabel = document.createElement('label');
-    qtyLabel.className = 'small';
-    qtyLabel.textContent = 'Menge';
-
-    const qtyControls = document.createElement('div');
-    qtyControls.className = 'qty-controls';
-
-    const minus = document.createElement('button');
-    minus.className = 'qty-btn';
-    minus.type = 'button';
-    minus.textContent = '−';
-    minus.addEventListener('click', () => {
-      products[index].qty = Math.max(0, Number(products[index].qty || 0) - 1);
-      saveProducts();
-      renderProducts();
-      renderBill();
-      syncTipFromAmountReceived();
-    });
-
-    const qtyInput = document.createElement('input');
-    qtyInput.type = 'number';
-    qtyInput.min = '0';
-    qtyInput.step = '1';
-    qtyInput.value = String(product.qty);
-    qtyInput.max = String(SECURITY_LIMITS.maxQty);
-    qtyInput.inputMode = 'numeric';
-    qtyInput.autocomplete = 'off';
-    qtyInput.addEventListener('input', event => {
-      const safeValue = Math.floor(clampNumber(event.target.value, 0, SECURITY_LIMITS.maxQty, 0));
-      products[index].qty = safeValue;
-      const normalized = String(safeValue);
-      if (qtyInput.value !== normalized && Number(qtyInput.value) !== safeValue) {
-        qtyInput.value = normalized;
-      }
-      saveProducts();
-      renderBill();
-      syncTipFromAmountReceived();
-    });
-
-    const plus = document.createElement('button');
-    plus.className = 'qty-btn';
-    plus.type = 'button';
-    plus.textContent = '+';
-    plus.addEventListener('click', () => {
-      products[index].qty = Math.min(SECURITY_LIMITS.maxQty, Number(products[index].qty || 0) + 1);
-      saveProducts();
-      renderProducts();
-      renderBill();
-      syncTipFromAmountReceived();
-    });
-
-    qtyControls.append(minus, qtyInput, plus);
-    qtyWrap.append(qtyLabel, qtyControls);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'icon-btn';
-    delBtn.type = 'button';
-    delBtn.title = 'Produkt entfernen';
-    delBtn.textContent = '✕';
-    delBtn.addEventListener('click', () => {
-      products.splice(index, 1);
-      saveProducts();
-      renderProducts();
-      renderBill();
-      syncTipFromAmountReceived();
-    });
-
-    row.append(
-      createField('Produkt', nameInput),
-      createField('Preis', priceInput),
-      qtyWrap,
-      delBtn
-    );
-
-    productList.appendChild(row);
+    group.append(heading, rows);
+    fragment.appendChild(group);
   });
+
+  productList.appendChild(fragment);
 }
 
 function renderBill() {
@@ -825,7 +955,7 @@ addProductBtn.addEventListener('click', () => {
     openInfoDialog('Limit erreicht', [`Es können maximal ${SECURITY_LIMITS.maxProducts} Produkte verwaltet werden.`]);
     return;
   }
-  products.push({ name: 'Neues Produkt', price: 0, qty: 0 });
+  products.push({ name: 'Neues Produkt', price: 0, qty: 0, category: PRODUCT_CATEGORIES.savory });
   saveProducts();
   renderProducts();
   renderBill();

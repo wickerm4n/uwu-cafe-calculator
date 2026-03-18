@@ -260,9 +260,34 @@
 	background-clip: padding-box;
   }
 
+  .product-group {
+	display: grid;
+	gap: 10px;
+  }
+
+  .product-group + .product-group {
+	margin-top: 8px;
+  }
+
+  .product-group-title {
+	margin: 0;
+	padding: 8px 12px;
+	border-radius: 14px;
+	background: var(--accent-soft);
+	color: var(--heading);
+	font-size: 0.84rem;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+  }
+
+  .product-group-rows {
+	display: grid;
+	gap: 8px;
+  }
+
   .product-row {
 	display: grid;
-	grid-template-columns: minmax(0, 1.7fr) minmax(110px, 0.58fr) minmax(160px, 0.8fr) 42px;
+	grid-template-columns: minmax(0, 1.6fr) minmax(110px, 0.58fr) minmax(160px, 0.82fr) 90px 42px;
 	gap: 10px;
 	align-items: end;
 	padding: 10px 12px;
@@ -328,7 +353,8 @@
 
   .qty-btn,
   .btn,
-  .icon-btn {
+  .icon-btn,
+  .reorder-btn {
 	border: none;
 	cursor: pointer;
 	transition: transform 0.14s ease, filter 0.14s ease, background 0.14s ease, color 0.14s ease;
@@ -361,6 +387,38 @@
 	display: inline-grid;
 	place-items: center;
 	padding: 0;
+  }
+
+  .reorder-wrap {
+	min-width: 0;
+  }
+
+  .reorder-label {
+	display: block;
+  }
+
+  .reorder-controls {
+	display: grid;
+	grid-template-columns: repeat(2, 42px);
+	gap: 6px;
+	justify-content: start;
+  }
+
+  .reorder-btn {
+	background: var(--panel-strong);
+	border: 1px solid var(--line);
+	color: var(--heading);
+  }
+
+  .reorder-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	filter: none;
+	transform: none;
+  }
+
+  .delete-btn {
+	justify-self: end;
   }
 
   .toolbar,
@@ -864,7 +922,7 @@
 	}
 
 	.product-row {
-	  grid-template-columns: minmax(0, 1.2fr) minmax(94px, 0.62fr) minmax(146px, 0.9fr) 40px;
+	  grid-template-columns: minmax(0, 1.1fr) minmax(94px, 0.62fr) minmax(146px, 0.9fr) 86px 40px;
 	  gap: 8px;
 	  padding: 10px;
 	}
@@ -939,6 +997,7 @@
 		"name"
 		"price"
 		"qty"
+		"reorder"
 		"remove";
 	  gap: 8px;
 	  padding: 10px 12px;
@@ -959,6 +1018,10 @@
 	}
 
 	.product-row > :nth-child(4) {
+	  grid-area: reorder;
+	}
+
+	.product-row > :nth-child(5) {
 	  grid-area: remove;
 	}
 
@@ -994,6 +1057,11 @@
 	  font-size: 0.9rem;
 	}
 
+	.reorder-controls {
+	  grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.reorder-btn,
 	.icon-btn {
 	  justify-self: stretch;
 	  width: 100%;
