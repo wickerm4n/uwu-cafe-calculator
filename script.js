@@ -562,29 +562,18 @@ function moveProductWithinCategory(index, direction) {
   if (!currentProduct) return;
 
   const category = inferProductCategory(currentProduct);
-  const categoryEntries = products
-    .map((product, productIndex) => ({ product, productIndex }))
-    .filter(entry => inferProductCategory(entry.product) === category);
+  const categoryIndexes = products
+    .map((product, productIndex) => (inferProductCategory(product) === category ? productIndex : -1))
+    .filter(productIndex => productIndex >= 0);
 
-  const currentPosition = categoryEntries.findIndex(entry => entry.productIndex === index);
+  const currentPosition = categoryIndexes.indexOf(index);
   const targetPosition = currentPosition + direction;
+  if (currentPosition < 0 || targetPosition < 0 || targetPosition >= categoryIndexes.length) return;
 
-  if (currentPosition < 0 || targetPosition < 0 || targetPosition >= categoryEntries.length) return;
-
-  const reorderedCategoryProducts = categoryEntries.map(entry => ({ ...entry.product }));
-  [reorderedCategoryProducts[currentPosition], reorderedCategoryProducts[targetPosition]] =
-    [reorderedCategoryProducts[targetPosition], reorderedCategoryProducts[currentPosition]];
-
-  let replacementIndex = 0;
-  products = products.map(product => {
-    if (inferProductCategory(product) !== category) {
-      return product;
-    }
-    const replacement = reorderedCategoryProducts[replacementIndex];
-    replacementIndex += 1;
-    return replacement ? { ...replacement } : product;
-  });
-
+  const targetIndex = categoryIndexes[targetPosition];
+  const updatedProducts = products.slice();
+  [updatedProducts[index], updatedProducts[targetIndex]] = [updatedProducts[targetIndex], updatedProducts[index]];
+  products = updatedProducts;
   saveProducts();
   renderProducts();
   renderBill();
@@ -786,15 +775,7 @@ function renderProducts() {
     addCategoryBtn.className = 'btn primary add-category-btn';
     addCategoryBtn.type = 'button';
     addCategoryBtn.setAttribute('data-category', category);
-
-    const addCategoryBtnIcon = document.createElement('span');
-    addCategoryBtnIcon.className = 'btn-icon';
-    addCategoryBtnIcon.setAttribute('aria-hidden', 'true');
-    addCategoryBtnIcon.textContent = '🛒';
-
-    const addCategoryBtnText = document.createTextNode('＋ Produkt hinzufügen');
-
-    addCategoryBtn.append(addCategoryBtnIcon, addCategoryBtnText);
+    addCategoryBtn.innerHTML = '<span class="btn-icon" aria-hidden="true">🛒</span>＋ Produkt hinzufügen';
     addCategoryBtn.addEventListener('click', () => addProductToCategory(category));
 
     categoryActions.appendChild(addCategoryBtn);
