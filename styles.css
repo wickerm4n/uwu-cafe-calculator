@@ -299,7 +299,9 @@
   }
 
   .field,
-  .qty-wrap {
+  .qty-wrap,
+  .reorder-wrap,
+  .toolbar-field {
 	min-width: 0;
   }
 
@@ -323,7 +325,8 @@
   }
 
   input[type="text"],
-  input[type="number"] {
+  input[type="number"],
+  select {
 	width: 100%;
 	border: 1px solid var(--field-border);
 	background: var(--field-bg);
@@ -338,7 +341,8 @@
   }
 
   input[type="text"]:focus,
-  input[type="number"]:focus {
+  input[type="number"]:focus,
+  select:focus {
 	border-color: var(--accent-dark);
 	box-shadow: 0 0 0 4px var(--field-focus-ring);
   }
@@ -393,10 +397,6 @@
 	min-width: 0;
   }
 
-  .reorder-label {
-	display: block;
-  }
-
   .reorder-controls {
 	display: grid;
 	grid-template-columns: repeat(2, 42px);
@@ -428,6 +428,19 @@
 	flex-wrap: wrap;
 	gap: 12px;
 	margin-top: 16px;
+  }
+
+  .toolbar {
+	align-items: flex-end;
+  }
+
+  .toolbar-field {
+	flex: 1 1 220px;
+	max-width: 320px;
+  }
+
+  .category-select-field select {
+	width: 100%;
   }
 
   .btn {
