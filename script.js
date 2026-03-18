@@ -786,7 +786,15 @@ function renderProducts() {
     addCategoryBtn.className = 'btn primary add-category-btn';
     addCategoryBtn.type = 'button';
     addCategoryBtn.setAttribute('data-category', category);
-    addCategoryBtn.innerHTML = '<span class="btn-icon" aria-hidden="true">🛒</span>＋ Produkt hinzufügen';
+
+    const addCategoryBtnIcon = document.createElement('span');
+    addCategoryBtnIcon.className = 'btn-icon';
+    addCategoryBtnIcon.setAttribute('aria-hidden', 'true');
+    addCategoryBtnIcon.textContent = '🛒';
+
+    const addCategoryBtnText = document.createTextNode('＋ Produkt hinzufügen');
+
+    addCategoryBtn.append(addCategoryBtnIcon, addCategoryBtnText);
     addCategoryBtn.addEventListener('click', () => addProductToCategory(category));
 
     categoryActions.appendChild(addCategoryBtn);
