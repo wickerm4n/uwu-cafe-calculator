@@ -285,17 +285,6 @@
 	gap: 8px;
   }
 
-
-  .product-group-actions {
-	display: flex;
-	justify-content: flex-start;
-	margin-top: 2px;
-  }
-
-  .add-category-btn {
-	width: auto;
-  }
-
   .product-row {
 	display: grid;
 	grid-template-columns: minmax(0, 1.6fr) minmax(110px, 0.58fr) minmax(160px, 0.82fr) 90px 42px;
