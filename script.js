@@ -558,6 +558,7 @@ function createField(labelText, input) {
 
 
 function moveProductWithinCategory(index, direction) {
+  const safeDirection = direction < 0 ? -1 : 1;
   const currentProduct = products[index];
   if (!currentProduct) return;
 
@@ -567,12 +568,21 @@ function moveProductWithinCategory(index, direction) {
     .filter(productIndex => productIndex >= 0);
 
   const currentPosition = categoryIndexes.indexOf(index);
-  const targetPosition = currentPosition + direction;
+  const targetPosition = currentPosition + safeDirection;
   if (currentPosition < 0 || targetPosition < 0 || targetPosition >= categoryIndexes.length) return;
 
-  const targetIndex = categoryIndexes[targetPosition];
+  const categoryProducts = categoryIndexes.map(productIndex => products[productIndex]);
+  const reorderedCategoryProducts = categoryProducts.slice();
+  [reorderedCategoryProducts[currentPosition], reorderedCategoryProducts[targetPosition]] = [
+    reorderedCategoryProducts[targetPosition],
+    reorderedCategoryProducts[currentPosition]
+  ];
+
   const updatedProducts = products.slice();
-  [updatedProducts[index], updatedProducts[targetIndex]] = [updatedProducts[targetIndex], updatedProducts[index]];
+  categoryIndexes.forEach((productIndex, categorySlotIndex) => {
+    updatedProducts[productIndex] = reorderedCategoryProducts[categorySlotIndex];
+  });
+
   products = updatedProducts;
   saveProducts();
   renderProducts();
