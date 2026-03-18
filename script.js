@@ -83,6 +83,7 @@ const billList = document.getElementById('billList');
 const totalItems = document.getElementById('totalItems');
 const totalPrice = document.getElementById('totalPrice');
 const discountedPrice = document.getElementById('discountedPrice');
+const addProductBtn = document.getElementById('addProductBtn');
 const resetBtn = document.getElementById('resetBtn');
 const resetQtyBtn = document.getElementById('resetQtyBtn');
 const resetTipBtn = document.getElementById('resetTipBtn');
@@ -580,20 +581,6 @@ function moveProductWithinCategory(index, direction) {
   syncTipFromAmountReceived();
 }
 
-function addProductToCategory(category) {
-  if (products.length >= SECURITY_LIMITS.maxProducts) {
-    openInfoDialog('Limit erreicht', [`Es können maximal ${SECURITY_LIMITS.maxProducts} Produkte verwaltet werden.`]);
-    return;
-  }
-
-  const safeCategory = isValidProductCategory(category) ? category : PRODUCT_CATEGORIES.savory;
-  products.push({ name: 'Neues Produkt', price: 0, qty: 0, category: safeCategory });
-  saveProducts();
-  renderProducts();
-  renderBill();
-  syncTipFromAmountReceived();
-}
-
 function renderProducts() {
   productList.replaceChildren();
 
@@ -716,7 +703,7 @@ function renderProducts() {
 
       const moveWrap = document.createElement('div');
       moveWrap.className = 'reorder-wrap';
-      const moveLabel = document.createElement('label');
+      const moveLabel = document.createElement('div');
       moveLabel.className = 'small reorder-label';
       moveLabel.textContent = 'Sortierung';
 
@@ -768,18 +755,7 @@ function renderProducts() {
       rows.appendChild(row);
     });
 
-    const categoryActions = document.createElement('div');
-    categoryActions.className = 'product-group-actions';
-
-    const addCategoryBtn = document.createElement('button');
-    addCategoryBtn.className = 'btn primary add-category-btn';
-    addCategoryBtn.type = 'button';
-    addCategoryBtn.setAttribute('data-category', category);
-    addCategoryBtn.innerHTML = '<span class="btn-icon" aria-hidden="true">🛒</span>＋ Produkt hinzufügen';
-    addCategoryBtn.addEventListener('click', () => addProductToCategory(category));
-
-    categoryActions.appendChild(addCategoryBtn);
-    group.append(heading, rows, categoryActions);
+    group.append(heading, rows);
     fragment.appendChild(group);
   });
 
@@ -974,6 +950,17 @@ addTipBtn.addEventListener('click', () => {
   syncTipFromAmountReceived();
 });
 
+addProductBtn.addEventListener('click', () => {
+  if (products.length >= SECURITY_LIMITS.maxProducts) {
+    openInfoDialog('Limit erreicht', [`Es können maximal ${SECURITY_LIMITS.maxProducts} Produkte verwaltet werden.`]);
+    return;
+  }
+  products.push({ name: 'Neues Produkt', price: 0, qty: 0, category: PRODUCT_CATEGORIES.savory });
+  saveProducts();
+  renderProducts();
+  renderBill();
+  syncTipFromAmountReceived();
+});
 
 resetBtn.addEventListener('click', () => {
   runConfirmedAction(
