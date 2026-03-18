@@ -10,7 +10,9 @@ const defaultProducts = [
   { name: 'Ramen', price: 25, qty: 0 },
   { name: 'Reis mit Curry', price: 25, qty: 0 },
   { name: 'Bento Box', price: 25, qty: 0 },
-  { name: 'Onigiri', price: 15, qty: 0 },
+  { name: 'Onigiri', price: 15, qty: 0 },  
+  { name: 'Omuraisu', price: 15, qty: 0 },
+  { name: 'Karaage', price: 15, qty: 0 },
   { name: 'Dango', price: 15, qty: 0 },
   { name: 'Mochi', price: 12, qty: 0 },
   { name: 'Kuchen', price: 15, qty: 0 },
@@ -19,8 +21,6 @@ const defaultProducts = [
   { name: 'Kaffee', price: 8, qty: 0 },
   { name: 'Matcha Latte', price: 10, qty: 0 },
   { name: 'Tee', price: 10, qty: 0 },
-  { name: 'Omuraisu', price: 15, qty: 0 },
-  { name: 'Karaage', price: 15, qty: 0 },
   { name: 'UwU Cookie', price: 0, qty: 0 }
 ];
 
