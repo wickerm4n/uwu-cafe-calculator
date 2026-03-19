@@ -5,6 +5,7 @@ const THEME_STORAGE_KEY = 'uwuCafePriceCalculator_theme';
 const DISCOUNT_STORAGE_KEY = 'uwuCafePriceCalculator_discount';
 const TIP_STORAGE_KEY = 'uwuCafePriceCalculator_tipTotal';
 const CONFIRM_PREFS_STORAGE_KEY = 'uwuCafePriceCalculator_confirmPrefs';
+const CATEGORY_SORT_STORAGE_KEY = 'uwuCafePriceCalculator_categorySort';
 
 const defaultProducts = [
   { name: 'Ramen', price: 25, qty: 0 },
@@ -330,6 +331,103 @@ function saveConfirmPrefs() {
   safeSetItem(CONFIRM_PREFS_STORAGE_KEY, JSON.stringify(confirmPrefs));
 }
 
+function loadCategorySortState() {
+  const parsed = parseStoredJson(CATEGORY_SORT_STORAGE_KEY, {});
+  const state = {};
+
+  PRODUCT_CATEGORY_ORDER.forEach(category => {
+    state[category] = Boolean(parsed?.[category]);
+  });
+
+  return state;
+}
+
+function saveCategorySortState() {
+  safeSetItem(CATEGORY_SORT_STORAGE_KEY, JSON.stringify(categorySortState));
+}
+
+function applyCategorySorting() {
+  const sortedProducts = [];
+
+  PRODUCT_CATEGORY_ORDER.forEach(category => {
+    const categoryProducts = products
+      .filter(product => inferProductCategory(product) === category)
+      .map(product => ({ ...product, category }));
+
+    if (categorySortState?.[category]) {
+      categoryProducts.sort((a, b) =>
+        sanitizeProductName(a.name).localeCompare(sanitizeProductName(b.name), 'de-DE', { sensitivity: 'base' })
+      );
+    }
+
+    sortedProducts.push(...categoryProducts);
+  });
+
+  products = sortedProducts;
+}
+
+function setCategorySortEnabled(category, enabled) {
+  if (!isValidProductCategory(category)) return;
+  categorySortState[category] = Boolean(enabled);
+  saveCategorySortState();
+  applyCategorySorting();
+  saveProducts();
+  renderProducts();
+  renderBill();
+  syncTipFromAmountReceived();
+}
+
+function updateProductQuantity(index, nextQty, qtyInput) {
+  if (!products[index]) return;
+
+  const safeValue = Math.floor(clampNumber(nextQty, 0, SECURITY_LIMITS.maxQty, 0));
+  products[index].qty = safeValue;
+  saveProducts();
+
+  if (qtyInput && qtyInput.value !== String(safeValue)) {
+    qtyInput.value = String(safeValue);
+  }
+
+  renderBill();
+  syncTipFromAmountReceived();
+}
+
+function bindPressAction(element, handler) {
+  if (!element || typeof handler !== 'function') return;
+
+  let lastTouchTs = 0;
+
+  const invoke = event => {
+    if (element.disabled) return;
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    handler(event);
+  };
+
+  if (window.PointerEvent) {
+    element.addEventListener('pointerup', event => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      invoke(event);
+    });
+    return;
+  }
+
+  element.addEventListener('touchend', event => {
+    lastTouchTs = Date.now();
+    invoke(event);
+  }, { passive: false });
+
+  element.addEventListener('click', event => {
+    if (Date.now() - lastTouchTs < 600) {
+      event.preventDefault();
+      return;
+    }
+    invoke(event);
+  });
+}
+
 const initialProducts = loadProducts();
 const productSyncResult = syncProductsWithDefaults(initialProducts);
 
@@ -338,6 +436,8 @@ let userThemePreference = loadThemePreference();
 let discountState = loadDiscountState();
 let tipTotalValue = loadTipTotal();
 let confirmPrefs = loadConfirmPrefs();
+let categorySortState = loadCategorySortState();
+applyCategorySorting();
 
 function getResolvedTheme() {
   return userThemePreference || (themeMedia.matches ? 'dark' : 'light');
@@ -579,6 +679,7 @@ function moveProductWithinCategory(index, direction) {
   if (!currentProduct) return;
 
   const category = inferProductCategory(currentProduct);
+  if (categorySortState[category]) return;
   const categoryIndexes = products
     .map((product, productIndex) => (inferProductCategory(product) === category ? productIndex : -1))
     .filter(productIndex => productIndex >= 0);
@@ -613,9 +714,37 @@ function renderProducts() {
     group.className = 'product-group';
     group.setAttribute('data-category', category);
 
+    const header = document.createElement('div');
+    header.className = 'product-group-header';
+
     const heading = document.createElement('h3');
     heading.className = 'product-group-title';
     heading.textContent = PRODUCT_CATEGORY_LABELS[category] || category;
+
+    const sortLabel = document.createElement('label');
+    sortLabel.className = 'sort-toggle';
+    sortLabel.setAttribute('for', `sort-toggle-${category}`);
+
+    const sortToggleText = document.createElement('span');
+    sortToggleText.className = 'sort-toggle-text';
+    sortToggleText.textContent = 'A–Z';
+
+    const sortInput = document.createElement('input');
+    sortInput.type = 'checkbox';
+    sortInput.id = `sort-toggle-${category}`;
+    sortInput.checked = Boolean(categorySortState[category]);
+    sortInput.setAttribute('aria-label', `${PRODUCT_CATEGORY_LABELS[category] || category} alphabetisch sortieren`);
+
+    const sortSlider = document.createElement('span');
+    sortSlider.className = 'sort-toggle-slider';
+    sortSlider.setAttribute('aria-hidden', 'true');
+
+    sortInput.addEventListener('change', event => {
+      setCategorySortEnabled(category, event.target.checked);
+    });
+
+    sortLabel.append(sortToggleText, sortInput, sortSlider);
+    header.append(heading, sortLabel);
 
     const rows = document.createElement('div');
     rows.className = 'product-group-rows';
@@ -623,6 +752,8 @@ function renderProducts() {
     categoryProducts.forEach(({ product, index }, categoryIndex) => {
       const row = document.createElement('div');
       row.className = 'product-row';
+      row.dataset.index = String(index);
+      row.dataset.category = category;
 
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
@@ -636,7 +767,13 @@ function renderProducts() {
         if (nameInput.value !== products[index].name) {
           nameInput.value = products[index].name;
         }
-        saveProducts();
+        if (categorySortState[category]) {
+          applyCategorySorting();
+          saveProducts();
+          renderProducts();
+        } else {
+          saveProducts();
+        }
         renderBill();
         syncTipFromAmountReceived();
       });
@@ -674,12 +811,9 @@ function renderProducts() {
       minus.className = 'qty-btn';
       minus.type = 'button';
       minus.textContent = '−';
-      minus.addEventListener('click', () => {
-        products[index].qty = Math.max(0, Number(products[index].qty || 0) - 1);
-        saveProducts();
-        renderProducts();
-        renderBill();
-        syncTipFromAmountReceived();
+      minus.setAttribute('aria-label', `${sanitizeProductName(product.name)} Menge verringern`);
+      bindPressAction(minus, () => {
+        updateProductQuantity(index, Number(products[index]?.qty || 0) - 1, qtyInput);
       });
 
       const qtyInput = document.createElement('input');
@@ -691,27 +825,16 @@ function renderProducts() {
       qtyInput.inputMode = 'numeric';
       qtyInput.autocomplete = 'off';
       qtyInput.addEventListener('input', event => {
-        const safeValue = Math.floor(clampNumber(event.target.value, 0, SECURITY_LIMITS.maxQty, 0));
-        products[index].qty = safeValue;
-        const normalized = String(safeValue);
-        if (qtyInput.value !== normalized && Number(qtyInput.value) !== safeValue) {
-          qtyInput.value = normalized;
-        }
-        saveProducts();
-        renderBill();
-        syncTipFromAmountReceived();
+        updateProductQuantity(index, event.target.value, qtyInput);
       });
 
       const plus = document.createElement('button');
       plus.className = 'qty-btn';
       plus.type = 'button';
       plus.textContent = '+';
-      plus.addEventListener('click', () => {
-        products[index].qty = Math.min(SECURITY_LIMITS.maxQty, Number(products[index].qty || 0) + 1);
-        saveProducts();
-        renderProducts();
-        renderBill();
-        syncTipFromAmountReceived();
+      plus.setAttribute('aria-label', `${sanitizeProductName(product.name)} Menge erhöhen`);
+      bindPressAction(plus, () => {
+        updateProductQuantity(index, Number(products[index]?.qty || 0) + 1, qtyInput);
       });
 
       qtyControls.append(minus, qtyInput, plus);
@@ -725,30 +848,33 @@ function renderProducts() {
       moveUpBtn.type = 'button';
       moveUpBtn.title = 'Produkt innerhalb der Gruppe nach oben verschieben';
       moveUpBtn.textContent = '↑';
-      moveUpBtn.disabled = categoryIndex === 0;
-      moveUpBtn.setAttribute('aria-disabled', String(categoryIndex === 0));
-      moveUpBtn.addEventListener('click', () => moveProductWithinCategory(index, -1));
+      moveUpBtn.disabled = categorySortState[category] || categoryIndex === 0;
+      moveUpBtn.setAttribute('aria-disabled', String(moveUpBtn.disabled));
+      bindPressAction(moveUpBtn, () => moveProductWithinCategory(index, -1));
 
       const moveDownBtn = document.createElement('button');
       moveDownBtn.className = 'icon-btn reorder-btn';
       moveDownBtn.type = 'button';
-      moveDownBtn.title = 'Produkt innerhalb der Gruppe nach unten verschieben';
+      moveDownBtn.title = categorySortState[category]
+        ? 'Manuelle Sortierung ist deaktiviert, solange A–Z aktiv ist'
+        : 'Produkt innerhalb der Gruppe nach unten verschieben';
       moveDownBtn.textContent = '↓';
-      moveDownBtn.disabled = categoryIndex === categoryProducts.length - 1;
-      moveDownBtn.setAttribute('aria-disabled', String(categoryIndex === categoryProducts.length - 1));
-      moveDownBtn.addEventListener('click', () => moveProductWithinCategory(index, 1));
+      moveDownBtn.disabled = categorySortState[category] || categoryIndex === categoryProducts.length - 1;
+      moveDownBtn.setAttribute('aria-disabled', String(moveDownBtn.disabled));
+      bindPressAction(moveDownBtn, () => moveProductWithinCategory(index, 1));
 
       moveControls.append(moveUpBtn, moveDownBtn);
 
-      const moveWrap = createField('Sortierung', moveControls, 'reorder-wrap');
+      const moveWrap = createField(categorySortState[category] ? 'Sortierung (A–Z aktiv)' : 'Sortierung', moveControls, 'reorder-wrap');
 
       const delBtn = document.createElement('button');
       delBtn.className = 'icon-btn delete-btn';
       delBtn.type = 'button';
       delBtn.title = 'Produkt entfernen';
       delBtn.textContent = '✕';
-      delBtn.addEventListener('click', () => {
+      bindPressAction(delBtn, () => {
         products.splice(index, 1);
+        applyCategorySorting();
         saveProducts();
         renderProducts();
         renderBill();
@@ -766,7 +892,7 @@ function renderProducts() {
       rows.appendChild(row);
     });
 
-    group.append(heading, rows);
+    group.append(header, rows);
     fragment.appendChild(group);
   });
 
@@ -972,6 +1098,7 @@ addProductBtn.addEventListener('click', () => {
     : PRODUCT_CATEGORIES.savory;
 
   products.push({ name: 'Neues Produkt', price: 0, qty: 0, category: selectedCategory });
+  applyCategorySorting();
   saveProducts();
   renderProducts();
   renderBill();
@@ -985,6 +1112,7 @@ resetBtn.addEventListener('click', () => {
     'Sicher, dass die ursprüngliche Produktliste wiederhergestellt werden soll?\n\nDadurch gehen manuell hinzugefügte oder geänderte Produkte verloren.',
     () => {
       products = cloneDefaultProducts();
+      applyCategorySorting();
       saveProducts();
       renderProducts();
       renderBill();
@@ -1138,276 +1266,3 @@ syncTipFromAmountReceived();
 if (productSyncResult.addedProducts.length) {
   openInfoDialog('Neue Produkte erkannt', productSyncResult.addedProducts);
 }
-
-
-// === Alphabetical Sort Feature ===
-function sortCategoryAZ() {
-    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-    if (!cat || !products[cat]) return;
-
-    products[cat].sort((a, b) => a.name.localeCompare(b.name));
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-function sortAllAZ() {
-    Object.keys(products).forEach(cat => {
-        products[cat].sort((a, b) => a.name.localeCompare(b.name));
-    });
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-
-// === Auto Sort + Per Category Memory ===
-let autoSortEnabled = JSON.parse(localStorage.getItem("autoSortEnabled") || "false");
-let categorySortState = JSON.parse(localStorage.getItem("categorySortState") || "{}");
-
-function saveSortSettings() {
-    localStorage.setItem("autoSortEnabled", JSON.stringify(autoSortEnabled));
-    localStorage.setItem("categorySortState", JSON.stringify(categorySortState));
-}
-
-function toggleAutoSort() {
-    autoSortEnabled = !autoSortEnabled;
-    saveSortSettings();
-    updateAutoSortUI();
-}
-
-function updateAutoSortUI() {
-    const btn = document.getElementById("autoSortToggle");
-    if (!btn) return;
-    btn.classList.toggle("active", autoSortEnabled);
-}
-
-function applyAutoSort(cat) {
-    if (!autoSortEnabled) return;
-    if (!products[cat]) return;
-
-    products[cat].sort((a, b) => a.name.localeCompare(b.name));
-    categorySortState[cat] = "az";
-    saveSortSettings();
-}
-
-const originalRender = renderProducts;
-renderProducts = function() {
-    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-    if (cat) applyAutoSort(cat);
-    originalRender();
-};
-
-
-
-
-// hook into add product
-if (typeof addProduct === "function") {
-    const originalAdd = addProduct;
-    addProduct = function(...args) {
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if (autoSortEnabled) {
-            const newItem = originalAdd.apply(this, args);
-            if (newItem && newItem.name) {
-                products[cat] = products[cat].filter(p => p !== newItem);
-                insertSorted(cat, newItem);
-                saveProducts && saveProducts();
-                renderProducts && renderProducts();
-            }
-            return newItem;
-        } else {
-            return originalAdd.apply(this, args);
-        }
-    }
-}
-
-
-// === FIX: Restore quantity controls ===
-
-// ensure increment/decrement works
-function changeQuantity(cat, index, delta) {
-    if (!products[cat] || !products[cat][index]) return;
-
-    products[cat][index].quantity = (products[cat][index].quantity || 0) + delta;
-    if (products[cat][index].quantity < 0) products[cat][index].quantity = 0;
-
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-// === FIX: Ensure sorting functions exist ===
-function sortCategoryAZ() {
-    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-    if (!cat || !products[cat]) return;
-
-    products[cat].sort((a, b) => a.name.localeCompare(b.name));
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-function sortAllAZ() {
-    Object.keys(products).forEach(cat => {
-        products[cat].sort((a, b) => a.name.localeCompare(b.name));
-    });
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-// ensure functions are globally available
-window.changeQuantity = changeQuantity;
-window.sortCategoryAZ = sortCategoryAZ;
-window.sortAllAZ = sortAllAZ;
-
-
-// ===== STABLE FIXES (Quantity + Sorting) =====
-
-// Ensure quantity change works via event delegation
-document.addEventListener("click", function(e){
-    if(e.target.matches(".btn-plus, .plus-btn")){
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            products[cat][index].quantity = (products[cat][index].quantity || 0) + 1;
-            saveProducts && saveProducts();
-            renderProducts && renderProducts();
-        }
-    }
-
-    if(e.target.matches(".btn-minus, .minus-btn")){
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            products[cat][index].quantity = Math.max(0,(products[cat][index].quantity || 0) - 1);
-            saveProducts && saveProducts();
-            renderProducts && renderProducts();
-        }
-    }
-});
-
-// ===== Sorting (always available) =====
-function sortCategoryAZ(){
-    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-    if(!products[cat]) return;
-
-    products[cat].sort((a,b)=> (a.name||"").localeCompare(b.name||""));
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-function sortAllAZ(){
-    Object.keys(products).forEach(cat=>{
-        products[cat].sort((a,b)=> (a.name||"").localeCompare(b.name||""));
-    });
-    saveProducts && saveProducts();
-    renderProducts && renderProducts();
-}
-
-window.sortCategoryAZ = sortCategoryAZ;
-window.sortAllAZ = sortAllAZ;
-
-
-// ===== LIVE INPUT FIX (instant update) =====
-
-// handle input changes instantly (no refresh needed)
-document.addEventListener("input", function(e){
-
-    // quantity input fields
-    if(e.target.matches(".quantity-input, input[type='number']")){
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            let val = parseFloat(e.target.value);
-            if(isNaN(val) || val < 0) val = 0;
-
-            products[cat][index].quantity = val;
-            saveProducts && saveProducts();
-            renderProducts && renderProducts();
-        }
-    }
-
-    // text inputs (e.g. name)
-    if(e.target.matches(".name-input, input[type='text']")){
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            products[cat][index].name = e.target.value;
-            saveProducts && saveProducts();
-        }
-    }
-
-    // price inputs
-    if(e.target.matches(".price-input")){
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            let val = parseFloat(e.target.value);
-            if(isNaN(val) || val < 0) val = 0;
-
-            products[cat][index].price = val;
-            saveProducts && saveProducts();
-            renderProducts && renderProducts();
-        }
-    }
-});
-
-
-// ===== FIREFOX ANDROID FIX =====
-
-// force UI update after quantity change (fix async render issues)
-function forceRender() {
-    requestAnimationFrame(() => {
-        renderProducts && renderProducts();
-    });
-}
-
-// better event handling (touch + click)
-["click","touchend"].forEach(evt=>{
-document.addEventListener(evt, function(e){
-
-    if(e.target.closest(".btn-plus, .plus-btn")){
-        e.preventDefault();
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            products[cat][index].quantity = (products[cat][index].quantity||0)+1;
-            saveProducts && saveProducts();
-            forceRender();
-        }
-    }
-
-    if(e.target.closest(".btn-minus, .minus-btn")){
-        e.preventDefault();
-        const el = e.target.closest("[data-index]");
-        if(!el) return;
-        const index = parseInt(el.dataset.index);
-        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
-
-        if(products[cat] && products[cat][index]){
-            products[cat][index].quantity = Math.max(0,(products[cat][index].quantity||0)-1);
-            saveProducts && saveProducts();
-            forceRender();
-        }
-    }
-
-});
-});
