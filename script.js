@@ -1138,3 +1138,92 @@ syncTipFromAmountReceived();
 if (productSyncResult.addedProducts.length) {
   openInfoDialog('Neue Produkte erkannt', productSyncResult.addedProducts);
 }
+
+
+// === Alphabetical Sort Feature ===
+function sortCategoryAZ() {
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if (!cat || !products[cat]) return;
+
+    products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+function sortAllAZ() {
+    Object.keys(products).forEach(cat => {
+        products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+
+// === Auto Sort + Per Category Memory ===
+let autoSortEnabled = JSON.parse(localStorage.getItem("autoSortEnabled") || "false");
+let categorySortState = JSON.parse(localStorage.getItem("categorySortState") || "{}");
+
+function saveSortSettings() {
+    localStorage.setItem("autoSortEnabled", JSON.stringify(autoSortEnabled));
+    localStorage.setItem("categorySortState", JSON.stringify(categorySortState));
+}
+
+function toggleAutoSort() {
+    autoSortEnabled = !autoSortEnabled;
+    saveSortSettings();
+    updateAutoSortUI();
+}
+
+function updateAutoSortUI() {
+    const btn = document.getElementById("autoSortToggle");
+    if (!btn) return;
+    btn.classList.toggle("active", autoSortEnabled);
+}
+
+function applyAutoSort(cat) {
+    if (!autoSortEnabled) return;
+    if (!products[cat]) return;
+
+    products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    categorySortState[cat] = "az";
+    saveSortSettings();
+}
+
+const originalRender = renderProducts;
+renderProducts = function() {
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if (cat) applyAutoSort(cat);
+    originalRender();
+};
+
+
+// === Smart Insert Sort (only new products) ===
+function insertSorted(cat, newItem) {
+    if (!products[cat]) return;
+    let arr = products[cat];
+
+    let index = arr.findIndex(p => p.name.localeCompare(newItem.name) > 0);
+    if (index === -1) arr.push(newItem);
+    else arr.splice(index, 0, newItem);
+}
+
+// hook into add product
+if (typeof addProduct === "function") {
+    const originalAdd = addProduct;
+    addProduct = function(...args) {
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if (autoSortEnabled) {
+            const newItem = originalAdd.apply(this, args);
+            if (newItem && newItem.name) {
+                products[cat] = products[cat].filter(p => p !== newItem);
+                insertSorted(cat, newItem);
+                saveProducts && saveProducts();
+                renderProducts && renderProducts();
+            }
+            return newItem;
+        } else {
+            return originalAdd.apply(this, args);
+        }
+    }
+}
