@@ -6,6 +6,7 @@ const DISCOUNT_STORAGE_KEY = 'uwuCafePriceCalculator_discount';
 const TIP_STORAGE_KEY = 'uwuCafePriceCalculator_tipTotal';
 const CONFIRM_PREFS_STORAGE_KEY = 'uwuCafePriceCalculator_confirmPrefs';
 const CATEGORY_SORT_STORAGE_KEY = 'uwuCafePriceCalculator_categorySort';
+const GLOBAL_CATEGORY_SORT_STORAGE_KEY = 'uwuCafePriceCalculator_globalCategorySort';
 
 const defaultProducts = [
   { name: 'Ramen', price: 25, qty: 0 },
@@ -87,6 +88,7 @@ const discountedPrice = document.getElementById('discountedPrice');
 const addProductBtn = document.getElementById('addProductBtn');
 const resetBtn = document.getElementById('resetBtn');
 const resetQtyBtn = document.getElementById('resetQtyBtn');
+const globalCategorySortToggle = document.getElementById('globalCategorySortToggle');
 const resetTipBtn = document.getElementById('resetTipBtn');
 const addTipBtn = document.getElementById('addTipBtn');
 const markPaidBtn = document.getElementById('markPaidBtn');
@@ -346,24 +348,34 @@ function saveCategorySortState() {
   safeSetItem(CATEGORY_SORT_STORAGE_KEY, JSON.stringify(categorySortState));
 }
 
+function loadGlobalCategorySortState() {
+  return safeGetItem(GLOBAL_CATEGORY_SORT_STORAGE_KEY) === 'true';
+}
+
+function saveGlobalCategorySortState() {
+  safeSetItem(GLOBAL_CATEGORY_SORT_STORAGE_KEY, String(globalCategorySortEnabled));
+}
+
+function isCategoryAlphabeticallySorted(category) {
+  return Boolean(globalCategorySortEnabled || categorySortState?.[category]);
+}
+
+function getCategoryEntries(category) {
+  const entries = products
+    .map((product, index) => ({ product, index }))
+    .filter(entry => inferProductCategory(entry.product) === category);
+
+  if (!isCategoryAlphabeticallySorted(category)) {
+    return entries;
+  }
+
+  return entries.slice().sort((a, b) =>
+    sanitizeProductName(a.product.name).localeCompare(sanitizeProductName(b.product.name), 'de-DE', { sensitivity: 'base' })
+  );
+}
+
 function applyCategorySorting() {
-  const sortedProducts = [];
-
-  PRODUCT_CATEGORY_ORDER.forEach(category => {
-    const categoryProducts = products
-      .filter(product => inferProductCategory(product) === category)
-      .map(product => ({ ...product, category }));
-
-    if (categorySortState?.[category]) {
-      categoryProducts.sort((a, b) =>
-        sanitizeProductName(a.name).localeCompare(sanitizeProductName(b.name), 'de-DE', { sensitivity: 'base' })
-      );
-    }
-
-    sortedProducts.push(...categoryProducts);
-  });
-
-  products = sortedProducts;
+  products = products.map(product => ({ ...product, category: inferProductCategory(product) }));
 }
 
 function setCategorySortEnabled(category, enabled) {
@@ -375,6 +387,20 @@ function setCategorySortEnabled(category, enabled) {
   renderProducts();
   renderBill();
   syncTipFromAmountReceived();
+}
+
+function setGlobalCategorySortEnabled(enabled) {
+  globalCategorySortEnabled = Boolean(enabled);
+  saveGlobalCategorySortState();
+  updateGlobalCategorySortUi();
+  renderProducts();
+  renderBill();
+  syncTipFromAmountReceived();
+}
+
+function updateGlobalCategorySortUi() {
+  if (!globalCategorySortToggle) return;
+  globalCategorySortToggle.checked = Boolean(globalCategorySortEnabled);
 }
 
 function updateProductQuantity(index, nextQty, qtyInput) {
@@ -437,6 +463,7 @@ let discountState = loadDiscountState();
 let tipTotalValue = loadTipTotal();
 let confirmPrefs = loadConfirmPrefs();
 let categorySortState = loadCategorySortState();
+let globalCategorySortEnabled = loadGlobalCategorySortState();
 applyCategorySorting();
 
 function getResolvedTheme() {
@@ -679,7 +706,7 @@ function moveProductWithinCategory(index, direction) {
   if (!currentProduct) return;
 
   const category = inferProductCategory(currentProduct);
-  if (categorySortState[category]) return;
+  if (isCategoryAlphabeticallySorted(category)) return;
   const categoryIndexes = products
     .map((product, productIndex) => (inferProductCategory(product) === category ? productIndex : -1))
     .filter(productIndex => productIndex >= 0);
@@ -704,9 +731,7 @@ function renderProducts() {
   const fragment = document.createDocumentFragment();
 
   PRODUCT_CATEGORY_ORDER.forEach(category => {
-    const categoryProducts = products
-      .map((product, index) => ({ product, index }))
-      .filter(entry => inferProductCategory(entry.product) === category);
+    const categoryProducts = getCategoryEntries(category);
 
     if (!categoryProducts.length) return;
 
@@ -767,7 +792,7 @@ function renderProducts() {
         if (nameInput.value !== products[index].name) {
           nameInput.value = products[index].name;
         }
-        if (categorySortState[category]) {
+        if (isCategoryAlphabeticallySorted(category)) {
           applyCategorySorting();
           saveProducts();
           renderProducts();
@@ -848,24 +873,24 @@ function renderProducts() {
       moveUpBtn.type = 'button';
       moveUpBtn.title = 'Produkt innerhalb der Gruppe nach oben verschieben';
       moveUpBtn.textContent = '↑';
-      moveUpBtn.disabled = categorySortState[category] || categoryIndex === 0;
+      moveUpBtn.disabled = isCategoryAlphabeticallySorted(category) || categoryIndex === 0;
       moveUpBtn.setAttribute('aria-disabled', String(moveUpBtn.disabled));
       bindPressAction(moveUpBtn, () => moveProductWithinCategory(index, -1));
 
       const moveDownBtn = document.createElement('button');
       moveDownBtn.className = 'icon-btn reorder-btn';
       moveDownBtn.type = 'button';
-      moveDownBtn.title = categorySortState[category]
+      moveDownBtn.title = isCategoryAlphabeticallySorted(category)
         ? 'Manuelle Sortierung ist deaktiviert, solange A–Z aktiv ist'
         : 'Produkt innerhalb der Gruppe nach unten verschieben';
       moveDownBtn.textContent = '↓';
-      moveDownBtn.disabled = categorySortState[category] || categoryIndex === categoryProducts.length - 1;
+      moveDownBtn.disabled = isCategoryAlphabeticallySorted(category) || categoryIndex === categoryProducts.length - 1;
       moveDownBtn.setAttribute('aria-disabled', String(moveDownBtn.disabled));
       bindPressAction(moveDownBtn, () => moveProductWithinCategory(index, 1));
 
       moveControls.append(moveUpBtn, moveDownBtn);
 
-      const moveWrap = createField(categorySortState[category] ? 'Sortierung (A–Z aktiv)' : 'Sortierung', moveControls, 'reorder-wrap');
+      const moveWrap = createField(isCategoryAlphabeticallySorted(category) ? 'Sortierung (A–Z aktiv)' : 'Sortierung', moveControls, 'reorder-wrap');
 
       const delBtn = document.createElement('button');
       delBtn.className = 'icon-btn delete-btn';
@@ -1121,6 +1146,12 @@ resetBtn.addEventListener('click', () => {
   );
 });
 
+if (globalCategorySortToggle) {
+  globalCategorySortToggle.addEventListener('change', event => {
+    setGlobalCategorySortEnabled(event.target.checked);
+  });
+}
+
 resetQtyBtn.addEventListener('click', () => {
   runConfirmedAction(
     CONFIRM_TYPES.resetQty,
@@ -1256,6 +1287,7 @@ if (productSyncResult.addedProducts.length) {
 }
 
 populateAddProductCategorySelect();
+updateGlobalCategorySortUi();
 applyTheme();
 updateDiscountUi();
 updateTipUi();

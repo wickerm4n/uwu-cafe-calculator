@@ -1284,3 +1284,48 @@
     justify-content: space-between;
   }
 }
+
+
+.global-sort-row {
+  margin-top: 14px;
+}
+
+.global-sort-toggle {
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  min-height: 58px;
+}
+
+.sort-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.sort-toggle-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--heading);
+  line-height: 1.35;
+}
+
+.sort-toggle-subtitle {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+@media (max-width: 680px) {
+  .global-sort-toggle {
+    align-items: flex-start;
+  }
+
+  .global-sort-toggle .sort-toggle-slider {
+    align-self: center;
+  }
+}
