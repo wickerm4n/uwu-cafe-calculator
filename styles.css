@@ -1292,9 +1292,11 @@
 
 .global-sort-toggle {
   width: 100%;
+  display: flex;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 12px 14px;
   min-height: 58px;
 }
@@ -1302,30 +1304,41 @@
 .sort-toggle-copy {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  justify-content: center;
+  gap: 2px;
   min-width: 0;
   flex: 1 1 auto;
 }
 
 .sort-toggle-title {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: var(--heading);
-  line-height: 1.35;
+  line-height: 1.22;
 }
 
 .sort-toggle-subtitle {
-  font-size: 0.8rem;
-  line-height: 1.4;
+  font-size: 0.74rem;
+  line-height: 1.24;
   color: var(--muted);
+}
+
+.global-sort-toggle .sort-toggle-slider {
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 @media (max-width: 680px) {
   .global-sort-toggle {
-    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 12px;
   }
 
-  .global-sort-toggle .sort-toggle-slider {
-    align-self: center;
+  .sort-toggle-title {
+    font-size: 0.82rem;
+  }
+
+  .sort-toggle-subtitle {
+    font-size: 0.7rem;
   }
 }
