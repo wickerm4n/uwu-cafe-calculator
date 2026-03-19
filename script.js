@@ -1138,3 +1138,276 @@ syncTipFromAmountReceived();
 if (productSyncResult.addedProducts.length) {
   openInfoDialog('Neue Produkte erkannt', productSyncResult.addedProducts);
 }
+
+
+// === Alphabetical Sort Feature ===
+function sortCategoryAZ() {
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if (!cat || !products[cat]) return;
+
+    products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+function sortAllAZ() {
+    Object.keys(products).forEach(cat => {
+        products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+
+// === Auto Sort + Per Category Memory ===
+let autoSortEnabled = JSON.parse(localStorage.getItem("autoSortEnabled") || "false");
+let categorySortState = JSON.parse(localStorage.getItem("categorySortState") || "{}");
+
+function saveSortSettings() {
+    localStorage.setItem("autoSortEnabled", JSON.stringify(autoSortEnabled));
+    localStorage.setItem("categorySortState", JSON.stringify(categorySortState));
+}
+
+function toggleAutoSort() {
+    autoSortEnabled = !autoSortEnabled;
+    saveSortSettings();
+    updateAutoSortUI();
+}
+
+function updateAutoSortUI() {
+    const btn = document.getElementById("autoSortToggle");
+    if (!btn) return;
+    btn.classList.toggle("active", autoSortEnabled);
+}
+
+function applyAutoSort(cat) {
+    if (!autoSortEnabled) return;
+    if (!products[cat]) return;
+
+    products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    categorySortState[cat] = "az";
+    saveSortSettings();
+}
+
+const originalRender = renderProducts;
+renderProducts = function() {
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if (cat) applyAutoSort(cat);
+    originalRender();
+};
+
+
+
+
+// hook into add product
+if (typeof addProduct === "function") {
+    const originalAdd = addProduct;
+    addProduct = function(...args) {
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if (autoSortEnabled) {
+            const newItem = originalAdd.apply(this, args);
+            if (newItem && newItem.name) {
+                products[cat] = products[cat].filter(p => p !== newItem);
+                insertSorted(cat, newItem);
+                saveProducts && saveProducts();
+                renderProducts && renderProducts();
+            }
+            return newItem;
+        } else {
+            return originalAdd.apply(this, args);
+        }
+    }
+}
+
+
+// === FIX: Restore quantity controls ===
+
+// ensure increment/decrement works
+function changeQuantity(cat, index, delta) {
+    if (!products[cat] || !products[cat][index]) return;
+
+    products[cat][index].quantity = (products[cat][index].quantity || 0) + delta;
+    if (products[cat][index].quantity < 0) products[cat][index].quantity = 0;
+
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+// === FIX: Ensure sorting functions exist ===
+function sortCategoryAZ() {
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if (!cat || !products[cat]) return;
+
+    products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+function sortAllAZ() {
+    Object.keys(products).forEach(cat => {
+        products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+// ensure functions are globally available
+window.changeQuantity = changeQuantity;
+window.sortCategoryAZ = sortCategoryAZ;
+window.sortAllAZ = sortAllAZ;
+
+
+// ===== STABLE FIXES (Quantity + Sorting) =====
+
+// Ensure quantity change works via event delegation
+document.addEventListener("click", function(e){
+    if(e.target.matches(".btn-plus, .plus-btn")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].quantity = (products[cat][index].quantity || 0) + 1;
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+
+    if(e.target.matches(".btn-minus, .minus-btn")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].quantity = Math.max(0,(products[cat][index].quantity || 0) - 1);
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+});
+
+// ===== Sorting (always available) =====
+function sortCategoryAZ(){
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if(!products[cat]) return;
+
+    products[cat].sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+function sortAllAZ(){
+    Object.keys(products).forEach(cat=>{
+        products[cat].sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+    });
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+window.sortCategoryAZ = sortCategoryAZ;
+window.sortAllAZ = sortAllAZ;
+
+
+// ===== LIVE INPUT FIX (instant update) =====
+
+// handle input changes instantly (no refresh needed)
+document.addEventListener("input", function(e){
+
+    // quantity input fields
+    if(e.target.matches(".quantity-input, input[type='number']")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            let val = parseFloat(e.target.value);
+            if(isNaN(val) || val < 0) val = 0;
+
+            products[cat][index].quantity = val;
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+
+    // text inputs (e.g. name)
+    if(e.target.matches(".name-input, input[type='text']")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].name = e.target.value;
+            saveProducts && saveProducts();
+        }
+    }
+
+    // price inputs
+    if(e.target.matches(".price-input")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            let val = parseFloat(e.target.value);
+            if(isNaN(val) || val < 0) val = 0;
+
+            products[cat][index].price = val;
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+});
+
+
+// ===== FIREFOX ANDROID FIX =====
+
+// force UI update after quantity change (fix async render issues)
+function forceRender() {
+    requestAnimationFrame(() => {
+        renderProducts && renderProducts();
+    });
+}
+
+// better event handling (touch + click)
+["click","touchend"].forEach(evt=>{
+document.addEventListener(evt, function(e){
+
+    if(e.target.closest(".btn-plus, .plus-btn")){
+        e.preventDefault();
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].quantity = (products[cat][index].quantity||0)+1;
+            saveProducts && saveProducts();
+            forceRender();
+        }
+    }
+
+    if(e.target.closest(".btn-minus, .minus-btn")){
+        e.preventDefault();
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].quantity = Math.max(0,(products[cat][index].quantity||0)-1);
+            saveProducts && saveProducts();
+            forceRender();
+        }
+    }
+
+});
+});
