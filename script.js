@@ -1309,3 +1309,60 @@ function sortAllAZ(){
 
 window.sortCategoryAZ = sortCategoryAZ;
 window.sortAllAZ = sortAllAZ;
+
+
+// ===== LIVE INPUT FIX (instant update) =====
+
+// handle input changes instantly (no refresh needed)
+document.addEventListener("input", function(e){
+
+    // quantity input fields
+    if(e.target.matches(".quantity-input, input[type='number']")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            let val = parseFloat(e.target.value);
+            if(isNaN(val) || val < 0) val = 0;
+
+            products[cat][index].quantity = val;
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+
+    // text inputs (e.g. name)
+    if(e.target.matches(".name-input, input[type='text']")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].name = e.target.value;
+            saveProducts && saveProducts();
+        }
+    }
+
+    // price inputs
+    if(e.target.matches(".price-input")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            let val = parseFloat(e.target.value);
+            if(isNaN(val) || val < 0) val = 0;
+
+            products[cat][index].price = val;
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+});
