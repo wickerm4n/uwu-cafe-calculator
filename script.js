@@ -1197,15 +1197,7 @@ renderProducts = function() {
 };
 
 
-// === Smart Insert Sort (only new products) ===
-function insertSorted(cat, newItem) {
-    if (!products[cat]) return;
-    let arr = products[cat];
 
-    let index = arr.findIndex(p => p.name.localeCompare(newItem.name) > 0);
-    if (index === -1) arr.push(newItem);
-    else arr.splice(index, 0, newItem);
-}
 
 // hook into add product
 if (typeof addProduct === "function") {
@@ -1227,3 +1219,40 @@ if (typeof addProduct === "function") {
         }
     }
 }
+
+
+// === FIX: Restore quantity controls ===
+
+// ensure increment/decrement works
+function changeQuantity(cat, index, delta) {
+    if (!products[cat] || !products[cat][index]) return;
+
+    products[cat][index].quantity = (products[cat][index].quantity || 0) + delta;
+    if (products[cat][index].quantity < 0) products[cat][index].quantity = 0;
+
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+// === FIX: Ensure sorting functions exist ===
+function sortCategoryAZ() {
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if (!cat || !products[cat]) return;
+
+    products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+function sortAllAZ() {
+    Object.keys(products).forEach(cat => {
+        products[cat].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+// ensure functions are globally available
+window.changeQuantity = changeQuantity;
+window.sortCategoryAZ = sortCategoryAZ;
+window.sortAllAZ = sortAllAZ;
