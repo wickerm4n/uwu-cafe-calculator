@@ -1256,3 +1256,56 @@ function sortAllAZ() {
 window.changeQuantity = changeQuantity;
 window.sortCategoryAZ = sortCategoryAZ;
 window.sortAllAZ = sortAllAZ;
+
+
+// ===== STABLE FIXES (Quantity + Sorting) =====
+
+// Ensure quantity change works via event delegation
+document.addEventListener("click", function(e){
+    if(e.target.matches(".btn-plus, .plus-btn")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].quantity = (products[cat][index].quantity || 0) + 1;
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+
+    if(e.target.matches(".btn-minus, .minus-btn")){
+        const el = e.target.closest("[data-index]");
+        if(!el) return;
+        const index = parseInt(el.dataset.index);
+        const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+
+        if(products[cat] && products[cat][index]){
+            products[cat][index].quantity = Math.max(0,(products[cat][index].quantity || 0) - 1);
+            saveProducts && saveProducts();
+            renderProducts && renderProducts();
+        }
+    }
+});
+
+// ===== Sorting (always available) =====
+function sortCategoryAZ(){
+    const cat = getCurrentCategory ? getCurrentCategory() : currentCategory;
+    if(!products[cat]) return;
+
+    products[cat].sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+function sortAllAZ(){
+    Object.keys(products).forEach(cat=>{
+        products[cat].sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+    });
+    saveProducts && saveProducts();
+    renderProducts && renderProducts();
+}
+
+window.sortCategoryAZ = sortCategoryAZ;
+window.sortAllAZ = sortAllAZ;
