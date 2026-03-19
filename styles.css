@@ -1292,13 +1292,13 @@
 
 .global-sort-toggle {
   width: 100%;
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   min-height: 58px;
+  border-radius: 22px;
 }
 
 .sort-toggle-copy {
@@ -1331,7 +1331,8 @@
 @media (max-width: 680px) {
   .global-sort-toggle {
     gap: 10px;
-    padding: 11px 12px;
+    padding: 12px 13px;
+    border-radius: 20px;
   }
 
   .sort-toggle-title {
