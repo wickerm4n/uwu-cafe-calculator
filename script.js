@@ -23,6 +23,7 @@ const defaultProducts = [
   { name: 'Kaffee', price: 8, qty: 0 },
   { name: 'Matcha Latte', price: 10, qty: 0 },
   { name: 'Tee', price: 10, qty: 0 },
+  { name: 'Orangensaft', price: 10, qty: 0 },
   { name: 'UwU Cookie', price: 0, qty: 0 }
 ];
 
@@ -59,7 +60,8 @@ const PRODUCT_CATEGORY_MAP = Object.freeze({
   'bubble tea': PRODUCT_CATEGORIES.drinks,
   kaffee: PRODUCT_CATEGORIES.drinks,
   'matcha latte': PRODUCT_CATEGORIES.drinks,
-  tee: PRODUCT_CATEGORIES.drinks
+  tee: PRODUCT_CATEGORIES.drinks,
+  orangensaft: PRODUCT_CATEGORIES.drinks
 });
 
 const CONFIRM_TYPES = Object.freeze({
